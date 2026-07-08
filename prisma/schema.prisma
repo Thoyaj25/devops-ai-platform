@@ -7,6 +7,84 @@ datasource db {
   provider = "postgresql"
 }
 
+model User {
+  id           String     @id @default(cuid())
+  name         String?
+  email        String     @unique
+  passwordHash String?
+  role         UserRole   @default(DEVELOPER)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  auditLogs    AuditLog[]
+  projects     Project[]
+}
+
+model Project {
+  id           String        @id @default(cuid())
+  name         String
+  description  String?
+  status       ProjectStatus @default(ACTIVE)
+  ownerId      String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  deployments  Deployment[]
+  environments Environment[]
+  pipelines    Pipeline[]
+  owner        User          @relation(fields: [ownerId], references: [id])
+}
+
+model Environment {
+  id          String          @id @default(cuid())
+  name        String
+  type        EnvironmentType
+  projectId   String
+  createdAt   DateTime        @default(now())
+  deployments Deployment[]
+  project     Project         @relation(fields: [projectId], references: [id])
+}
+
+model Pipeline {
+  id          String       @id @default(cuid())
+  name        String
+  provider    String?
+  repository  String?
+  projectId   String
+  createdAt   DateTime     @default(now())
+  deployments Deployment[]
+  project     Project      @relation(fields: [projectId], references: [id])
+}
+
+model Deployment {
+  id            String           @id @default(cuid())
+  version       String?
+  status        DeploymentStatus @default(RUNNING)
+  projectId     String
+  environmentId String
+  pipelineId    String
+  logs          String?
+  createdAt     DateTime         @default(now())
+  environment   Environment      @relation(fields: [environmentId], references: [id])
+  pipeline      Pipeline         @relation(fields: [pipelineId], references: [id])
+  project       Project          @relation(fields: [projectId], references: [id])
+}
+
+model Cluster {
+  id        String   @id @default(cuid())
+  name      String
+  provider  String?
+  region    String?
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  resource  String
+  userId    String
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
 
 enum UserRole {
   ADMIN
@@ -32,113 +110,4 @@ enum EnvironmentType {
   DEVELOPMENT
   STAGING
   PRODUCTION
-}
-
-
-model User {
-  id            String   @id @default(cuid())
-  name          String?
-  email         String   @unique
-  passwordHash  String?
-  role          UserRole @default(DEVELOPER)
-
-  projects      Project[]
-  auditLogs     AuditLog[]
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
-
-model Project {
-  id            String        @id @default(cuid())
-  name          String
-  description   String?
-  status        ProjectStatus @default(ACTIVE)
-
-  ownerId       String
-  owner         User          @relation(fields: [ownerId], references: [id])
-
-  environments  Environment[]
-  pipelines     Pipeline[]
-  deployments   Deployment[]
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
-
-model Environment {
-  id            String          @id @default(cuid())
-  name          String
-  type          EnvironmentType
-
-  projectId     String
-  project       Project         @relation(fields: [projectId], references: [id])
-
-  deployments   Deployment[]
-
-  createdAt     DateTime @default(now())
-}
-
-
-model Pipeline {
-  id            String   @id @default(cuid())
-  name          String
-
-  provider      String?
-  repository    String?
-
-  projectId     String
-  project       Project @relation(fields: [projectId], references: [id])
-
-  deployments   Deployment[]
-
-  createdAt     DateTime @default(now())
-}
-
-
-model Deployment {
-  id             String           @id @default(cuid())
-  version        String?
-  status         DeploymentStatus @default(RUNNING)
-
-  projectId      String
-  project        Project @relation(fields: [projectId], references: [id])
-
-  environmentId  String
-  environment    Environment @relation(fields: [environmentId], references: [id])
-
-  pipelineId     String
-  pipeline       Pipeline @relation(fields: [pipelineId], references: [id])
-
-  logs           String?
-
-  createdAt      DateTime @default(now())
-}
-
-
-model Cluster {
-  id             String @id @default(cuid())
-
-  name           String
-  provider       String?
-  region         String?
-
-  createdAt      DateTime @default(now())
-}
-
-
-model AuditLog {
-  id             String   @id @default(cuid())
-
-  action         String
-  resource       String
-
-  userId         String
-  user           User @relation(fields: [userId], references: [id])
-
-  metadata       Json?
-
-  createdAt      DateTime @default(now())
 }

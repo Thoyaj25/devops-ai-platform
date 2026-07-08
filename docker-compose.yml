@@ -1,4 +1,29 @@
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: marketsphere-app
+
+    restart: unless-stopped
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://marketsphere:marketsphere@postgres:5432/marketsphere?schema=public
+      REDIS_URL: redis://redis:6379
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+
+    ports:
+      - "3000:3000"
+
   postgres:
     image: postgres:16-alpine
     container_name: marketsphere-postgres
