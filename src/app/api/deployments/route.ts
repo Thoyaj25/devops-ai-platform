@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 import { authOptions } from "@/lib/auth/config";
 import { permissions } from "@/lib/auth/permissions";
 import { deploymentService } from "@/services/deployment/deploymentService";
+import { deploymentJobService } from "@/services/deployment/deploymentJobService";
 
 export async function GET(request: NextRequest) {
   try {
@@ -78,6 +79,9 @@ export async function POST(request: NextRequest) {
       },
       session.user.id
     );
+
+    // Create a job for the deployment execution
+    await deploymentJobService.createJob(deployment.id);
 
     return NextResponse.json(deployment, {
       status: 201,

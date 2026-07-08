@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { DeploymentStatus } from "@/generated/prisma/enums";
 
 export const deploymentRepository = {
   async findAllByEnvironment(environmentId: string) {
@@ -40,6 +41,16 @@ export const deploymentRepository = {
         projectId: data.projectId,
         environmentId: data.environmentId,
         pipelineId: data.pipelineId,
+      },
+    });
+  },
+
+  async updateStatus(id: string, status: DeploymentStatus, logs?: string) {
+    return prisma.deployment.update({
+      where: { id },
+      data: {
+        status,
+        logs,
       },
     });
   },
