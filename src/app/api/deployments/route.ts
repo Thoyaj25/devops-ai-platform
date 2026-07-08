@@ -64,12 +64,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const deployment = await deploymentService.createDeployment({
+    const deployment =
+  await deploymentService.createDeployment(
+    {
       version,
       projectId,
       environmentId,
       pipelineId,
-    });
+    },
+    session.user.id
+  );
 
     return NextResponse.json(deployment, {
       status: 201,

@@ -16,18 +16,19 @@ export const pipelineService = {
     return pipeline;
   },
 
-  async createPipeline(input: {
-    name: string;
-    provider?: string;
-    repository?: string;
-    projectId: string;
-  }) {
-    const project = await projectRepository.findById(
-      input.projectId
-    );
+  async createPipeline(
+    input: {
+      name: string;
+      provider?: string;
+      repository?: string;
+      projectId: string;
+    },
+    ownerId: string
+  ) {
+    const project = await projectRepository.findByIdForOwner(input.projectId, ownerId);
 
     if (!project) {
-      throw new Error("Project not found");
+      throw new Error("Project not found or unauthorized");
     }
 
     return pipelineRepository.create(input);

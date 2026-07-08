@@ -14,7 +14,7 @@ export const environmentService = {
     const environment = await environmentRepository.findById(id);
 
     if (!environment) {
-      throw new Error("Environment not found");
+      return null;
     }
 
     return environment;
@@ -25,12 +25,13 @@ export const environmentService = {
       name: string;
       type: EnvironmentType;
     },
-    projectId: string
+    projectId: string,
+    ownerId: string
   ) {
-    const project = await projectRepository.findById(projectId);
+    const project = await projectRepository.findByIdForOwner(projectId, ownerId);
 
     if (!project) {
-      throw new Error("Project not found");
+      throw new Error("Project not found or unauthorized");
     }
 
     const data = createEnvironmentSchema.parse(input);

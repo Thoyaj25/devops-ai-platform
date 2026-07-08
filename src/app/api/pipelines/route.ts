@@ -56,12 +56,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const pipeline = await pipelineService.createPipeline({
+    const pipeline =
+  await pipelineService.createPipeline(
+    {
       name: body.name,
       provider: body.provider,
       repository: body.repository,
       projectId: body.projectId,
-    });
+    },
+    session.user.id
+  );
 
     return NextResponse.json(pipeline, {
       status: 201,

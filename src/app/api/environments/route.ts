@@ -73,13 +73,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const environment = await environmentService.createEnvironment(
-      {
-        name,
-        type,
-      },
-      projectId
-    );
+    const environment =
+  await environmentService.createEnvironment(
+    {
+      name,
+      type,
+    },
+    projectId,
+    session.user.id
+  );
 
     return NextResponse.json(environment, {
       status: 201,
