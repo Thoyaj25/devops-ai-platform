@@ -2,6 +2,7 @@ import { deploymentRepository } from "@/repositories/deploymentRepository";
 import { environmentRepository } from "@/repositories/environmentRepository";
 import { pipelineRepository } from "@/repositories/pipelineRepository";
 import { projectRepository } from "@/repositories/projectRepository";
+import { auditService } from "@/services/audit/auditService";
 
 export const deploymentService = {
   async getEnvironmentDeployments(environmentId: string) {
@@ -53,6 +54,21 @@ export const deploymentService = {
       throw new Error("Pipeline does not belong to the specified project");
     }
 
-    return deploymentRepository.create(input);
+    const deployment = await deploymentRepository.create(input);
+
+    await auditService.log({
+      action: "CREATE_DEPLOYMENT",
+      resource: "DEPLOYMENT",
+      userId: ownerId,
+      metadata: {
+        version: deployment.version,
+        environmentId: deployment.environmentId,
+        pipelineId: deployment.pipelineId,
+        projectId: input.projectId,
+        resourceId: deployment.id,
+      },
+    });
+
+    return deployment;
   },
 };

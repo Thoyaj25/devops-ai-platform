@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 import { authOptions } from "@/lib/auth/config";
 import { permissions } from "@/lib/auth/permissions";
 import { projectService } from "@/services/project/projectService";
+import { auditService } from "@/services/audit/auditService";
 
 export async function GET() {
   try {
@@ -49,6 +50,13 @@ export async function POST(request: Request) {
       },
       session.user.id
     );
+
+    await auditService.log({
+      action: "CREATE_PROJECT",
+      resource: "PROJECT",
+      userId: session.user.id,
+      metadata: { name: project.name, resourceId: project.id },
+    });
 
     return NextResponse.json(project, { status: 201 });
   } catch (error) {

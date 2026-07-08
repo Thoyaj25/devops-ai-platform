@@ -3,6 +3,7 @@ import {
   type CreateProjectInput,
 } from "@/lib/validation/project";
 import { projectRepository } from "@/repositories/projectRepository";
+import { auditService } from "@/services/audit/auditService";
 
 export const projectService = {
   async getProjects() {
@@ -25,9 +26,18 @@ export const projectService = {
   ) {
     const data = createProjectSchema.parse(input);
 
-    return projectRepository.create({
+    const project = await projectRepository.create({
       ...data,
       ownerId,
     });
+
+    await auditService.log({
+      action: "CREATE_PROJECT",
+      resource: "PROJECT",
+      userId: ownerId,
+      metadata: { name: project.name, resourceId: project.id },
+    });
+
+    return project;
   },
 };

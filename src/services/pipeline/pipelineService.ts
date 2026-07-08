@@ -1,5 +1,6 @@
 import { pipelineRepository } from "@/repositories/pipelineRepository";
 import { projectRepository } from "@/repositories/projectRepository";
+import { auditService } from "@/services/audit/auditService";
 
 export const pipelineService = {
   async getProjectPipelines(projectId: string) {
@@ -31,6 +32,15 @@ export const pipelineService = {
       throw new Error("Project not found or unauthorized");
     }
 
-    return pipelineRepository.create(input);
+    const pipeline = await pipelineRepository.create(input);
+
+    await auditService.log({
+      action: "CREATE_PIPELINE",
+      resource: "PIPELINE",
+      userId: ownerId,
+      metadata: { name: pipeline.name, projectId: input.projectId, resourceId: pipeline.id },
+    });
+
+    return pipeline;
   },
 };

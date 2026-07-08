@@ -79,7 +79,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       {
-        error: "Failed to create pipeline",
+        error: error instanceof Error ? error.message : "Failed to create pipeline",
       },
       {
         status: 500,
