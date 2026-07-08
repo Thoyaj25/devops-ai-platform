@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import Badge from "@/components/ui/Badge";
 import Card from "@/components/ui/Card";
+import DeploymentLogs from "@/components/deployments/DeploymentLogs";
 import { deploymentService } from "@/services/deployment/deploymentService";
 
 type Props = {
@@ -71,9 +72,11 @@ export default async function DeploymentPage({
 
           <div>
             <p className="text-sm text-gray-500">Logs</p>
-            <pre className="rounded bg-gray-100 p-4 text-sm">
-              {deployment.logs ?? "No logs available."}
-            </pre>
+            <DeploymentLogs
+              deploymentId={id}
+              initialLogs={deployment.logs ?? ""}
+              initialStatus={deployment.status}
+            />
           </div>
         </div>
       </Card>

@@ -34,10 +34,7 @@ export default async function EnvironmentPage({
           </p>
         </div>
         
-        <DeploymentForm 
-          projectId={environment.projectId} 
-          environmentId={environment.id} 
-        />
+        <DeploymentForm projectId={environment.projectId} />
       </div>
 
       <section className="mt-8 rounded-lg border p-6">

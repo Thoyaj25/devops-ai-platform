@@ -1,146 +1,125 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
-import Button from "@/components/ui/Button";
-import Card from "@/components/ui/Card";
-import Input from "@/components/ui/Input";
+type Environment = {
+  id: string;
+  name: string;
+};
 
 type Pipeline = {
   id: string;
   name: string;
 };
 
-type Props = {
-  projectId: string;
-  environmentId: string;
-};
-
 export default function DeploymentForm({
   projectId,
-  environmentId,
-}: Props) {
-  const router = useRouter();
+}: {
+  projectId: string;
+}) {
+  const [version, setVersion] = useState("v1.0.0");
 
-  const [version, setVersion] = useState("");
+  const [environmentId, setEnvironmentId] = useState("");
+
   const [pipelineId, setPipelineId] = useState("");
+
+  const [environments, setEnvironments] = useState<Environment[]>([]);
+
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    async function loadPipelines() {
-      const response = await fetch(
+    async function load() {
+      const envRes = await fetch(
+        `/api/environments?projectId=${projectId}`
+      );
+
+      const pipeRes = await fetch(
         `/api/pipelines?projectId=${projectId}`
       );
 
-      if (!response.ok) {
-        return;
-      }
+      setEnvironments(await envRes.json());
 
-      const data: Pipeline[] = await response.json();
-
-      setPipelines(data);
-
-      if (data.length > 0) {
-        setPipelineId(data[0].id);
-      }
+      setPipelines(await pipeRes.json());
     }
 
-    loadPipelines();
+    load();
   }, [projectId]);
 
-  async function handleSubmit(
-    event: React.FormEvent<HTMLFormElement>
-  ) {
-    event.preventDefault();
+  async function createDeployment() {
+    const res = await fetch("/api/deployments", {
+      method: "POST",
 
-    setLoading(true);
+      headers: {
+        "Content-Type": "application/json",
+      },
 
-    try {
-      const response = await fetch("/api/deployments", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          version,
-          projectId,
-          environmentId,
-          pipelineId,
-        }),
-      });
+      body: JSON.stringify({
+        version,
+        environmentId,
+        pipelineId,
+        projectId,
+      }),
+    });
 
-      if (!response.ok) {
-        throw new Error("Failed to create deployment");
-      }
+    const deployment = await res.json();
 
-      setVersion("");
+    console.log(deployment);
 
-      router.refresh();
-    } catch (error) {
-      console.error(error);
-      alert("Unable to create deployment.");
-    } finally {
-      setLoading(false);
-    }
+    alert("Deployment created");
   }
 
   return (
-    <Card
-      title="Create Deployment"
-      description="Deploy a new application version."
-      className="mt-8"
-    >
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-6"
-      >
-        <div>
-          <label className="mb-2 block text-sm font-medium">
-            Version
-          </label>
+    <div className="rounded-xl border p-6">
+      <h2 className="text-2xl font-semibold">
+        Create Deployment
+      </h2>
 
-          <Input
-            value={version}
-            onChange={(e) => setVersion(e.target.value)}
-            placeholder="v1.0.0"
-            required
-          />
-        </div>
+      <div className="mt-4 space-y-4">
+        <input
+          className="w-full rounded border p-2"
+          value={version}
+          onChange={(e) => setVersion(e.target.value)}
+        />
 
-        <div>
-          <label className="mb-2 block text-sm font-medium">
-            Pipeline
-          </label>
-
-          <select
-            value={pipelineId}
-            onChange={(e) =>
-              setPipelineId(e.target.value)
-            }
-            className="w-full rounded-md border px-4 py-2"
-          >
-            {pipelines.map((pipeline) => (
-              <option
-                key={pipeline.id}
-                value={pipeline.id}
-              >
-                {pipeline.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <Button
-          type="submit"
-          disabled={loading || !pipelineId}
+        <select
+          className="w-full rounded border p-2"
+          value={environmentId}
+          onChange={(e) =>
+            setEnvironmentId(e.target.value)
+          }
         >
-          {loading
-            ? "Creating..."
-            : "Create Deployment"}
-        </Button>
-      </form>
-    </Card>
+          <option value="">Environment</option>
+
+          {environments.map((env) => (
+            <option key={env.id} value={env.id}>
+              {env.name}
+            </option>
+          ))}
+        </select>
+
+        <select
+          className="w-full rounded border p-2"
+          value={pipelineId}
+          onChange={(e) =>
+            setPipelineId(e.target.value)
+          }
+        >
+          <option value="">Pipeline</option>
+
+          {pipelines.map((pipe) => (
+            <option key={pipe.id} value={pipe.id}>
+              {pipe.name}
+            </option>
+          ))}
+        </select>
+
+        <button
+          onClick={createDeployment}
+          className="rounded bg-black px-4 py-2 text-white"
+        >
+          Deploy
+        </button>
+      </div>
+    </div>
   );
 }

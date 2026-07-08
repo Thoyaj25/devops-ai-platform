@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import EnvironmentForm from "@/components/forms/EnvironmentForm";
 import PipelineForm from "@/components/forms/PipelineForm";
+import DeploymentForm from "@/components/forms/DeploymentForm";
 import EnvironmentList from "@/components/environments/EnvironmentList";
 import PipelineList from "@/components/pipelines/PipelineList";
 import ProjectHeader from "@/components/projects/ProjectHeader";
@@ -46,6 +47,7 @@ export default async function ProjectPage({
         <div className="space-y-8">
           <EnvironmentForm projectId={id} />
           <PipelineForm projectId={id} />
+          <DeploymentForm projectId={id} />
         </div>
       </div>
     </main>

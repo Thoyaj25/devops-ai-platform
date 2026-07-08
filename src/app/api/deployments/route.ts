@@ -5,7 +5,7 @@ import { logger } from "@/lib/logger";
 import { authOptions } from "@/lib/auth/config";
 import { permissions } from "@/lib/auth/permissions";
 import { deploymentService } from "@/services/deployment/deploymentService";
-import { deploymentJobService } from "@/services/deployment/deploymentJobService";
+import { deploymentExecutor } from "@/services/deployment/deploymentExecutor";
 
 export async function GET(request: NextRequest) {
   try {
@@ -80,8 +80,10 @@ export async function POST(request: NextRequest) {
       session.user.id
     );
 
-    // Create a job for the deployment execution
-    await deploymentJobService.createJob(deployment.id);
+    // Temporarily execute deployment directly instead of using deploymentJobService
+    deploymentExecutor.execute(deployment.id).catch((err) =>
+      logger.error({ err }, "Deployment execution failed")
+    );
 
     return NextResponse.json(deployment, {
       status: 201,
