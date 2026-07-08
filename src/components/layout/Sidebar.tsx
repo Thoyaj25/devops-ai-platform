@@ -18,10 +18,6 @@ const navigation = [
     href: "/dashboard/pipelines",
   },
   {
-    name: "Clusters",
-    href: "/dashboard/clusters",
-  },
-  {
     name: "Monitoring",
     href: "/dashboard/monitoring",
   },
