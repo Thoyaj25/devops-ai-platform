@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { logger } from "@/lib/logger";
 
 import { authOptions } from "@/lib/auth/config";
+import { permissions } from "@/lib/auth/permissions";
 import { projectService } from "@/services/project/projectService";
 
 export async function GET() {
@@ -11,10 +12,7 @@ export async function GET() {
 
     return NextResponse.json(projects);
   } catch (error) {
-    logger.error(
-      { error },
-      "Failed to fetch projects"
-    );
+    logger.error({ error }, "Failed to fetch projects");
 
     return NextResponse.json(
       { error: "Failed to fetch projects" },
@@ -27,11 +25,12 @@ export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+    if (!session?.user?.id || !session?.user?.role) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!permissions.canCreateProject(session.user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
@@ -53,10 +52,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(project, { status: 201 });
   } catch (error) {
-    logger.error(
-      { error },
-      "Failed to create project"
-    );
+    logger.error({ error }, "Failed to create project");
 
     return NextResponse.json(
       { error: "Failed to create project" },
