@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
 import { logger } from "@/lib/logger";
 
+import { authOptions } from "@/lib/auth/config";
 import { deploymentService } from "@/services/deployment/deploymentService";
 
 export async function GET(request: NextRequest) {
@@ -26,10 +28,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(deployments);
   } catch (error) {
-    logger.error(
-      { error },
-      "GET /api/deployments error"
-    );
+    logger.error({ error }, "GET /api/deployments error");
 
     return NextResponse.json(
       {
@@ -44,6 +43,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
 
     const { version, projectId, environmentId, pipelineId } = body;
@@ -70,17 +75,12 @@ export async function POST(request: NextRequest) {
       status: 201,
     });
   } catch (error) {
-    logger.error(
-      { error },
-      "POST /api/deployments error"
-    );
+    logger.error({ error }, "POST /api/deployments error");
 
     return NextResponse.json(
       {
         error:
-          error instanceof Error
-            ? error.message
-            : "Failed to create deployment",
+          error instanceof Error ? error.message : "Failed to create deployment",
       },
       {
         status: 500,
