@@ -5,7 +5,9 @@ import { logger } from "@/lib/logger";
 import { authOptions } from "@/lib/auth/config";
 import { permissions } from "@/lib/auth/permissions";
 import { projectService } from "@/services/project/projectService";
-import { auditService } from "@/services/audit/auditService";
+import { createAuditLog } from "@/lib/audit/logger";
+import { AUDIT_ACTIONS } from "@/lib/audit/actions";
+import { AUDIT_RESOURCES } from "@/lib/audit/resources";
 
 export async function GET() {
   try {
@@ -51,9 +53,9 @@ export async function POST(request: Request) {
       session.user.id
     );
 
-    await auditService.log({
-      action: "CREATE_PROJECT",
-      resource: "PROJECT",
+    await createAuditLog({
+      action: AUDIT_ACTIONS.CREATE,
+      resource: AUDIT_RESOURCES.PROJECT,
       userId: session.user.id,
       metadata: { name: project.name, resourceId: project.id },
     });

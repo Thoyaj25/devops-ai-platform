@@ -5,6 +5,9 @@ import { logger } from "@/lib/logger";
 import { authOptions } from "@/lib/auth/config";
 import { permissions } from "@/lib/auth/permissions";
 import { environmentService } from "@/services/environment/environmentService";
+import { createAuditLog } from "@/lib/audit/logger";
+import { AUDIT_ACTIONS } from "@/lib/audit/actions";
+import { AUDIT_RESOURCES } from "@/lib/audit/resources";
 
 export async function GET(request: NextRequest) {
   try {
@@ -90,6 +93,13 @@ export async function POST(request: NextRequest) {
       projectId,
       session.user.id
     );
+
+    await createAuditLog({
+      action: AUDIT_ACTIONS.CREATE,
+      resource: AUDIT_RESOURCES.ENVIRONMENT,
+      userId: session.user.id,
+      metadata: { name: environment.name, projectId, resourceId: environment.id },
+    });
 
     return NextResponse.json(environment, {
       status: 201,
