@@ -1,30 +1,30 @@
 import { UserRole } from "@/generated/prisma/enums";
 
-// Helper to verify if a role has at least the required access level
-const hasRole = (role: UserRole, allowedRoles: UserRole[]) => {
-  return allowedRoles.includes(role);
+export const PERMISSIONS: Record<string, UserRole[]> = {
+  CREATE_PROJECT: [UserRole.ADMIN, UserRole.DEVOPS_ENGINEER],
+  CREATE_ENVIRONMENT: [UserRole.ADMIN, UserRole.DEVOPS_ENGINEER],
+  CREATE_PIPELINE: [UserRole.ADMIN, UserRole.DEVOPS_ENGINEER],
+  CREATE_DEPLOYMENT: [
+    UserRole.ADMIN,
+    UserRole.DEVOPS_ENGINEER,
+    UserRole.DEVELOPER,
+  ],
+  DELETE_RESOURCE: [UserRole.ADMIN],
 };
 
-const DEV_AND_ADMIN = [UserRole.ADMIN, UserRole.DEVOPS_ENGINEER];
-
 export const permissions = {
-  canCreateProject(role: UserRole) {
-    return hasRole(role, DEV_AND_ADMIN);
-  },
+  canCreateProject: (role: UserRole) =>
+    PERMISSIONS.CREATE_PROJECT.includes(role),
 
-  canCreateEnvironment(role: UserRole) {
-    return hasRole(role, DEV_AND_ADMIN);
-  },
+  canCreateEnvironment: (role: UserRole) =>
+    PERMISSIONS.CREATE_ENVIRONMENT.includes(role),
 
-  canCreatePipeline(role: UserRole) {
-    return hasRole(role, DEV_AND_ADMIN);
-  },
+  canCreatePipeline: (role: UserRole) =>
+    PERMISSIONS.CREATE_PIPELINE.includes(role),
 
-  canCreateDeployment(role: UserRole) {
-    return hasRole(role, [...DEV_AND_ADMIN, UserRole.DEVELOPER]);
-  },
+  canCreateDeployment: (role: UserRole) =>
+    PERMISSIONS.CREATE_DEPLOYMENT.includes(role),
 
-  canDeleteResource(role: UserRole) {
-    return hasRole(role, [UserRole.ADMIN]);
-  },
+  canDeleteResource: (role: UserRole) =>
+    PERMISSIONS.DELETE_RESOURCE.includes(role),
 };

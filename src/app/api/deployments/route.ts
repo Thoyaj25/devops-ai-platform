@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { logger } from "@/lib/logger";
 
 import { authOptions } from "@/lib/auth/config";
+import { permissions } from "@/lib/auth/permissions";
 import { deploymentService } from "@/services/deployment/deploymentService";
 
 export async function GET(request: NextRequest) {
@@ -45,8 +46,12 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.id) {
+    if (!session?.user?.id || !session?.user?.role) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!permissions.canCreateDeployment(session.user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
@@ -64,16 +69,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const deployment =
-  await deploymentService.createDeployment(
-    {
-      version,
-      projectId,
-      environmentId,
-      pipelineId,
-    },
-    session.user.id
-  );
+    const deployment = await deploymentService.createDeployment(
+      {
+        version,
+        projectId,
+        environmentId,
+        pipelineId,
+      },
+      session.user.id
+    );
 
     return NextResponse.json(deployment, {
       status: 201,

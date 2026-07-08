@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { logger } from "@/lib/logger";
 
 import { authOptions } from "@/lib/auth/config";
+import { permissions } from "@/lib/auth/permissions";
 import { environmentService } from "@/services/environment/environmentService";
 
 export async function GET(request: NextRequest) {
@@ -27,10 +28,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(environments);
   } catch (error) {
-    logger.error(
-      { error },
-      "GET /api/environments error"
-    );
+    logger.error({ error }, "GET /api/environments error");
 
     return NextResponse.json(
       {
@@ -47,13 +45,24 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.id) {
+    if (!session?.user?.id || !session?.user?.role) {
       return NextResponse.json(
         {
           error: "Unauthorized",
         },
         {
           status: 401,
+        }
+      );
+    }
+
+    if (!permissions.canCreateEnvironment(session.user.role)) {
+      return NextResponse.json(
+        {
+          error: "Forbidden",
+        },
+        {
+          status: 403,
         }
       );
     }
@@ -73,31 +82,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const environment =
-  await environmentService.createEnvironment(
-    {
-      name,
-      type,
-    },
-    projectId,
-    session.user.id
-  );
+    const environment = await environmentService.createEnvironment(
+      {
+        name,
+        type,
+      },
+      projectId,
+      session.user.id
+    );
 
     return NextResponse.json(environment, {
       status: 201,
     });
   } catch (error) {
-    logger.error(
-      { error },
-      "POST /api/environments error"
-    );
+    logger.error({ error }, "POST /api/environments error");
 
     return NextResponse.json(
       {
         error:
-          error instanceof Error
-            ? error.message
-            : "Failed to create environment",
+          error instanceof Error ? error.message : "Failed to create environment",
       },
       {
         status: 500,

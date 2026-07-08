@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { logger } from "@/lib/logger";
 
 import { authOptions } from "@/lib/auth/config";
+import { permissions } from "@/lib/auth/permissions";
 import { pipelineService } from "@/services/pipeline/pipelineService";
 
 export async function GET(request: NextRequest) {
@@ -43,8 +44,12 @@ export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.id) {
+    if (!session?.user?.id || !session?.user?.role) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!permissions.canCreatePipeline(session.user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
@@ -56,16 +61,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const pipeline =
-  await pipelineService.createPipeline(
-    {
-      name: body.name,
-      provider: body.provider,
-      repository: body.repository,
-      projectId: body.projectId,
-    },
-    session.user.id
-  );
+    const pipeline = await pipelineService.createPipeline(
+      {
+        name: body.name,
+        provider: body.provider,
+        repository: body.repository,
+        projectId: body.projectId,
+      },
+      session.user.id
+    );
 
     return NextResponse.json(pipeline, {
       status: 201,
