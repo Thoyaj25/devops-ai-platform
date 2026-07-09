@@ -1,120 +1,45 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { logger } from "@/lib/logger";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
-import { authOptions } from "@/lib/auth/config";
-import { permissions } from "@/lib/auth/permissions";
-import { environmentService } from "@/services/environment/environmentService";
-import { createAuditLog } from "@/lib/audit/logger";
-import { AUDIT_ACTIONS } from "@/lib/audit/actions";
-import { AUDIT_RESOURCES } from "@/lib/audit/resources";
-
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-
-    const projectId = searchParams.get("projectId");
-
-    if (!projectId) {
-      return NextResponse.json(
-        {
-          error: "projectId is required",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    const environments =
-      await environmentService.getProjectEnvironments(projectId);
-
-    return NextResponse.json(environments);
-  } catch (error) {
-    logger.error({ error }, "GET /api/environments error");
-
-    return NextResponse.json(
-      {
-        error: "Failed to fetch environments",
-      },
-      {
-        status: 500,
-      }
-    );
-  }
-}
-
-export async function POST(request: NextRequest) {
+export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id || !session?.user?.role) {
+    
+    if (!session) {
       return NextResponse.json(
-        {
-          error: "Unauthorized",
-        },
-        {
-          status: 401,
-        }
+        { error: "Unauthorized" }, 
+        { status: 401 }
       );
     }
 
-    if (!permissions.canCreateEnvironment(session.user.role)) {
+    const body = await req.json();
+    const { name, type, projectId } = body;
+
+    // Basic validation
+    if (!name || !type || !projectId) {
       return NextResponse.json(
-        {
-          error: "Forbidden",
-        },
-        {
-          status: 403,
-        }
+        { error: "Missing required fields" },
+        { status: 400 }
       );
     }
 
-    const body = await request.json();
-
-    const { projectId, name, type } = body;
-
-    if (!projectId || !name || !type) {
-      return NextResponse.json(
-        {
-          error: "projectId, name and type are required",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    const environment = await environmentService.createEnvironment(
-      {
+    // Direct database operation
+    const environment = await prisma.environment.create({
+      data: {
         name,
         type,
+        projectId,
       },
-      projectId,
-      session.user.id
-    );
-
-    await createAuditLog({
-      action: AUDIT_ACTIONS.CREATE,
-      resource: AUDIT_RESOURCES.ENVIRONMENT,
-      userId: session.user.id,
-      metadata: { name: environment.name, projectId, resourceId: environment.id },
     });
 
-    return NextResponse.json(environment, {
-      status: 201,
-    });
+    return NextResponse.json(environment, { status: 201 });
   } catch (error) {
-    logger.error({ error }, "POST /api/environments error");
-
+    console.error("Failed to create environment:", error);
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Failed to create environment",
-      },
-      {
-        status: 500,
-      }
+      { error: "Internal Server Error" },
+      { status: 500 }
     );
   }
 }
