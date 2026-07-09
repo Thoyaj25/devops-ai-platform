@@ -18,7 +18,6 @@ const authUserSelect = {
 } satisfies Prisma.UserSelect;
 
 // Input types
-
 type CreateUserData = {
   name: string;
   email: string;
@@ -32,6 +31,13 @@ export const userRepository = {
   // -------------------------
   // Read operations
   // -------------------------
+
+  /**
+   * Returns the total count of users.
+   */
+  count() {
+    return prisma.user.count();
+  },
 
   findAll() {
     return prisma.user.findMany({

@@ -33,15 +33,12 @@ const defaultDeploymentInclude = {
   },
 } satisfies Prisma.DeploymentInclude;
 
-
 // Default ordering
 const defaultOrder: Prisma.DeploymentOrderByWithRelationInput = {
   createdAt: "desc",
 };
 
-
 // Input types
-
 type CreateDeploymentData = {
   version?: string;
   projectId: string;
@@ -49,16 +46,20 @@ type CreateDeploymentData = {
   pipelineId: string;
 };
 
-
 type UpdateDeploymentData =
   Parameters<typeof prisma.deployment.update>[0]["data"];
 
-
 export const deploymentRepository = {
-
   // -------------------------
   // Read operations
   // -------------------------
+
+  /**
+   * Returns the total count of deployments.
+   */
+  count() {
+    return prisma.deployment.count();
+  },
 
   findAll() {
     return prisma.deployment.findMany({
@@ -66,7 +67,6 @@ export const deploymentRepository = {
       include: defaultDeploymentInclude,
     });
   },
-
 
   findAllByProject(projectId: string) {
     return prisma.deployment.findMany({
@@ -97,7 +97,6 @@ export const deploymentRepository = {
     });
   },
 
-
   exists(id: string) {
     return prisma.deployment.findUnique({
       where: {
@@ -109,7 +108,6 @@ export const deploymentRepository = {
     });
   },
 
-
   // -------------------------
   // Write operations
   // -------------------------
@@ -118,43 +116,35 @@ export const deploymentRepository = {
     return prisma.deployment.create({
       data: {
         version: data.version,
-
         project: {
           connect: {
             id: data.projectId,
           },
         },
-
         environment: {
           connect: {
             id: data.environmentId,
           },
         },
-
         pipeline: {
           connect: {
             id: data.pipelineId,
           },
         },
       },
-
       include: defaultDeploymentInclude,
     });
   },
-
 
   update(id: string, data: UpdateDeploymentData) {
     return prisma.deployment.update({
       where: {
         id,
       },
-
       data,
-
       include: defaultDeploymentInclude,
     });
   },
-
 
   delete(id: string) {
     return prisma.deployment.delete({

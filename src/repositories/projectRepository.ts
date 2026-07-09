@@ -26,6 +26,13 @@ type UpdateProjectData = Record<string, unknown>;
 export const projectRepository = {
   // Read
 
+  /**
+   * Returns the total count of projects.
+   */
+  count() {
+    return prisma.project.count();
+  },
+
   findAll() {
     return prisma.project.findMany({
       orderBy: defaultOrder,
