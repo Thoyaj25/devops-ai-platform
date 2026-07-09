@@ -1,102 +1,162 @@
+import type { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
-import { DeploymentStatus } from "@/generated/prisma/enums";
+
+// Reusable include configuration
+const defaultDeploymentInclude = {
+  project: {
+    select: {
+      id: true,
+      name: true,
+    },
+  },
+
+  environment: {
+    select: {
+      id: true,
+      name: true,
+      type: true,
+    },
+  },
+
+  pipeline: {
+    select: {
+      id: true,
+      name: true,
+      provider: true,
+    },
+  },
+
+  jobs: {
+    orderBy: {
+      createdAt: "asc",
+    },
+  },
+} satisfies Prisma.DeploymentInclude;
+
+
+// Default ordering
+const defaultOrder: Prisma.DeploymentOrderByWithRelationInput = {
+  createdAt: "desc",
+};
+
+
+// Input types
+
+type CreateDeploymentData = {
+  version?: string;
+  projectId: string;
+  environmentId: string;
+  pipelineId: string;
+};
+
+
+type UpdateDeploymentData =
+  Parameters<typeof prisma.deployment.update>[0]["data"];
+
 
 export const deploymentRepository = {
-  async findAllByProject(projectId: string) {
+
+  // -------------------------
+  // Read operations
+  // -------------------------
+
+  findAll() {
+    return prisma.deployment.findMany({
+      orderBy: defaultOrder,
+      include: defaultDeploymentInclude,
+    });
+  },
+
+
+  findAllByProject(projectId: string) {
     return prisma.deployment.findMany({
       where: {
         projectId,
       },
-      include: {
-        pipeline: true,
-        environment: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: defaultOrder,
+      include: defaultDeploymentInclude,
     });
   },
 
-  async findAllByEnvironment(environmentId: string) {
+  findAllByEnvironment(environmentId: string) {
     return prisma.deployment.findMany({
       where: {
         environmentId,
       },
-      include: {
-        pipeline: true,
-        project: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: defaultOrder,
+      include: defaultDeploymentInclude,
     });
   },
 
-  async findAllByPipeline(pipelineId: string) {
-    return prisma.deployment.findMany({
-      where: {
-        pipelineId,
-      },
-      include: {
-        environment: true,
-        project: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-  },
-
-  async findById(id: string) {
+  findById(id: string) {
     return prisma.deployment.findUnique({
       where: {
         id,
       },
-      include: {
-        pipeline: true,
-        environment: true,
-        project: true,
+      include: defaultDeploymentInclude,
+    });
+  },
+
+
+  exists(id: string) {
+    return prisma.deployment.findUnique({
+      where: {
+        id,
+      },
+      select: {
+        id: true,
       },
     });
   },
 
-  async create(data: {
-    version?: string;
-    projectId: string;
-    environmentId: string;
-    pipelineId: string;
-    status?: DeploymentStatus;
-    logs?: string;
-  }) {
+
+  // -------------------------
+  // Write operations
+  // -------------------------
+
+  create(data: CreateDeploymentData) {
     return prisma.deployment.create({
       data: {
         version: data.version,
-        projectId: data.projectId,
-        environmentId: data.environmentId,
-        pipelineId: data.pipelineId,
-        status: data.status ?? DeploymentStatus.RUNNING,
-        logs: data.logs,
+
+        project: {
+          connect: {
+            id: data.projectId,
+          },
+        },
+
+        environment: {
+          connect: {
+            id: data.environmentId,
+          },
+        },
+
+        pipeline: {
+          connect: {
+            id: data.pipelineId,
+          },
+        },
       },
+
+      include: defaultDeploymentInclude,
     });
   },
 
-  async updateStatus(
-    id: string,
-    status: DeploymentStatus,
-    logs?: string
-  ) {
+
+  update(id: string, data: UpdateDeploymentData) {
     return prisma.deployment.update({
       where: {
         id,
       },
-      data: {
-        status,
-        logs,
-      },
+
+      data,
+
+      include: defaultDeploymentInclude,
     });
   },
 
-  async delete(id: string) {
+
+  delete(id: string) {
     return prisma.deployment.delete({
       where: {
         id,
