@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { deploymentExecutor } from "@/services/deployment/deploymentExecutor";
-import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
