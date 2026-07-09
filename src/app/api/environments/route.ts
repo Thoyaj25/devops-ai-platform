@@ -1,45 +1,70 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+
+import { authOptions } from "@/lib/auth/config";
+import { environmentService } from "@/services/environment/environmentService";
+import { logger } from "@/lib/logger";
+import { createEnvironmentSchema } from "@/lib/validation/environment";
+
 
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session) {
+
+    if (!session?.user?.id) {
       return NextResponse.json(
-        { error: "Unauthorized" }, 
-        { status: 401 }
+        {
+          error: "Unauthorized",
+        },
+        {
+          status: 401,
+        }
       );
     }
+
 
     const body = await req.json();
-    const { name, type, projectId } = body;
 
-    // Basic validation
-    if (!name || !type || !projectId) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
+
+    const validated = createEnvironmentSchema.parse(body);
+
+
+    const environment =
+      await environmentService.createEnvironment(
+        {
+          name: validated.name,
+          type: validated.type,
+        },
+        validated.projectId,
+        session.user.id
       );
-    }
 
-    // Direct database operation
-    const environment = await prisma.environment.create({
-      data: {
-        name,
-        type,
-        projectId,
-      },
-    });
 
-    return NextResponse.json(environment, { status: 201 });
-  } catch (error) {
-    console.error("Failed to create environment:", error);
     return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
+      environment,
+      {
+        status: 201,
+      }
+    );
+
+
+  } catch (error) {
+
+    logger.error(
+      {
+        error,
+      },
+      "Failed to create environment"
+    );
+
+
+    return NextResponse.json(
+      {
+        error: "Failed to create environment",
+      },
+      {
+        status: 500,
+      }
     );
   }
 }

@@ -1,10 +1,19 @@
 import { z } from "zod";
 
-import { EnvironmentType } from "@/generated/prisma/enums";
-
 export const createEnvironmentSchema = z.object({
-  name: z.string().min(2).max(100),
-  type: z.nativeEnum(EnvironmentType),
+  name: z
+    .string()
+    .min(2, "Environment name must contain at least 2 characters"),
+
+  type: z.enum([
+    "DEVELOPMENT",
+    "STAGING",
+    "PRODUCTION",
+  ]),
+
+  projectId: z
+    .string()
+    .min(1, "Project ID is required"),
 });
 
 export type CreateEnvironmentInput =
