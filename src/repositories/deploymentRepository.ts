@@ -61,6 +61,16 @@ export const deploymentRepository = {
     return prisma.deployment.count();
   },
 
+  /**
+   * Retrieves specific log and status data for a deployment.
+   */
+  findLogs(id: string) {
+    return prisma.deployment.findUnique({
+      where: { id },
+      select: { logs: true, status: true },
+    });
+  },
+
   findAll() {
     return prisma.deployment.findMany({
       orderBy: defaultOrder,
@@ -111,6 +121,16 @@ export const deploymentRepository = {
   // -------------------------
   // Write operations
   // -------------------------
+
+  /**
+   * Appends logs to a deployment.
+   */
+  async updateLogs(id: string, logs: string) {
+    return prisma.deployment.update({
+      where: { id },
+      data: { logs },
+    });
+  },
 
   create(data: CreateDeploymentData) {
     return prisma.deployment.create({
