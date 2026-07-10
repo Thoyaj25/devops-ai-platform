@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { logger } from "@/lib/logger";
-
 import { authOptions } from "@/lib/auth/config";
 import { permissions } from "@/lib/auth/permissions";
 import { deploymentService } from "@/services/deployment/deploymentService";
-import { deploymentExecutor } from "@/services/deployment/deploymentExecutor";
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,10 +17,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const deployments = await deploymentService.getEnvironmentDeployments(
-      environmentId
-    );
-
+    const deployments = await deploymentService.getEnvironmentDeployments(environmentId);
     return NextResponse.json(deployments);
   } catch (error) {
     logger.error({ error }, "Failed to fetch deployments");
@@ -47,22 +42,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    // Delegation: Input validation is now handled inside deploymentService.createDeployment
-    // via Zod schema parsing.
-    const deployment = await deploymentService.createDeployment(
-      {
-        version: body.version,
-        projectId: body.projectId,
-        environmentId: body.environmentId,
-        pipelineId: body.pipelineId,
-      },
-      session.user.id
-    );
-
-    // Execute deployment asynchronously
-    deploymentExecutor.execute(deployment.id).catch((err) =>
-      logger.error({ err }, "Deployment execution failed")
-    );
+    // Refactored: Unified service method handles creation and async execution trigger
+    const deployment = await deploymentService.createDeployment(body, session.user.id);
 
     return NextResponse.json(deployment, { status: 201 });
   } catch (error) {

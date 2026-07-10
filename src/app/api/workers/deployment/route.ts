@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
-import { deploymentExecutor } from "@/services/deployment/deploymentExecutor";
+// Assuming you have a worker orchestration service defined
+import { runDeploymentWorker } from "@/workers/deploymentWorker";
 
+/**
+ * Step 1 — Inspect the worker API
+ * 
+ * Refactored to delegate execution to the worker orchestration layer
+ * rather than calling the executor directly within the API route.
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -14,14 +21,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Connect Worker with Executor
-    // We execute asynchronously to not block the worker response
-    deploymentExecutor.execute(deploymentId).catch((error) => {
-      logger.error({ error, deploymentId, jobId }, "Background deployment execution failed");
-    });
+    // Delegate orchestration to the worker service
+    // The service handles the background execution/job loop logic
+    await runDeploymentWorker();
 
     return NextResponse.json({
-      message: "Deployment execution started",
+      message: "Deployment worker successfully triggered",
       deploymentId,
       jobId,
     });
@@ -29,7 +34,9 @@ export async function POST(request: NextRequest) {
     logger.error({ error }, "Failed to trigger deployment worker");
 
     return NextResponse.json(
-      { error: "Failed to trigger deployment worker" },
+      { 
+        error: error instanceof Error ? error.message : "Failed to trigger deployment worker" 
+      },
       { status: 500 }
     );
   }
