@@ -2,12 +2,11 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth/config";
-import { environmentService } from "@/services/environment/environmentService";
 import { logger } from "@/lib/logger";
-import { createEnvironmentSchema } from "@/lib/validation/environment";
 
+import { environmentService } from "@/services/environment/environmentService";
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -22,23 +21,17 @@ export async function POST(req: Request) {
       );
     }
 
-
-    const body = await req.json();
-
-
-    const validated = createEnvironmentSchema.parse(body);
-
+    const body = await request.json();
 
     const environment =
       await environmentService.createEnvironment(
         {
-          name: validated.name,
-          type: validated.type,
+          name: body.name,
+          type: body.type,
         },
-        validated.projectId,
+        body.projectId,
         session.user.id
       );
-
 
     return NextResponse.json(
       environment,
@@ -46,17 +39,13 @@ export async function POST(req: Request) {
         status: 201,
       }
     );
-
-
   } catch (error) {
-
     logger.error(
       {
         error,
       },
       "Failed to create environment"
     );
-
 
     return NextResponse.json(
       {
