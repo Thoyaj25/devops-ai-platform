@@ -4,34 +4,45 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/config";
 import { permissions } from "@/lib/auth/permissions";
 import { logger } from "@/lib/logger";
+
 import { deploymentService } from "@/services/deployment/deploymentService";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const projectId = searchParams.get("projectId");
+
     const environmentId = searchParams.get("environmentId");
 
-    // Support querying deployments by project or environment
-    if (projectId) {
-      const deployments = await deploymentService.getProjectDeployments(projectId);
-      return NextResponse.json(deployments);
+    if (!environmentId) {
+      return NextResponse.json(
+        {
+          error: "environmentId is required",
+        },
+        {
+          status: 400,
+        }
+      );
     }
 
-    if (environmentId) {
-      const deployments = await deploymentService.getEnvironmentDeployments(environmentId);
-      return NextResponse.json(deployments);
-    }
+    const deployments =
+      await deploymentService.getEnvironmentDeployments(
+        environmentId
+      );
 
-    return NextResponse.json(
-      { error: "projectId or environmentId is required" },
-      { status: 400 }
-    );
+    return NextResponse.json(deployments);
   } catch (error) {
-    logger.error({ error }, "Failed to fetch deployments");
+    logger.error(
+      { error },
+      "Failed to fetch deployments"
+    );
+
     return NextResponse.json(
-      { error: "Failed to fetch deployments" },
-      { status: 500 }
+      {
+        error: "Failed to fetch deployments",
+      },
+      {
+        status: 500,
+      }
     );
   }
 }
@@ -42,30 +53,43 @@ export async function POST(request: NextRequest) {
 
     if (!session?.user?.id || !session?.user?.role) {
       return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
+        {
+          error: "Unauthorized",
+        },
+        {
+          status: 401,
+        }
       );
     }
 
     if (!permissions.canCreateDeployment(session.user.role)) {
       return NextResponse.json(
-        { error: "Forbidden" },
-        { status: 403 }
+        {
+          error: "Forbidden",
+        },
+        {
+          status: 403,
+        }
       );
     }
 
     const body = await request.json();
 
-    const deployment = await deploymentService.initiateDeployment(
-      body,
-      session.user.id
-    );
+    // Creates deployment + deployment job
+    const deployment =
+      await deploymentService.initiateDeployment(
+        body,
+        session.user.id
+      );
 
     return NextResponse.json(deployment, {
       status: 201,
     });
   } catch (error) {
-    logger.error({ error }, "Failed to create deployment");
+    logger.error(
+      { error },
+      "Failed to create deployment"
+    );
 
     return NextResponse.json(
       {

@@ -19,6 +19,13 @@ export const deploymentService = {
   },
 
   /**
+   * Returns all deployments for a project.
+   */
+  async getProjectDeployments(projectId: string) {
+    return deploymentRepository.findAllByProject(projectId);
+  },
+
+  /**
    * Returns a deployment by ID.
    */
   async getDeployment(id: string) {

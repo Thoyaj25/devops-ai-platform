@@ -25,13 +25,15 @@ export const deploymentJobService = {
    */
   async updateJob(
     id: string,
-    status: JobStatus,
-    error?: string
+    data: {
+      status?: JobStatus;
+      error?: string | null;
+      nextRetryAt?: Date | null;
+      startedAt?: Date | null;
+      completedAt?: Date | null;
+    }
   ) {
-    return deploymentJobRepository.update(id, {
-      status,
-      error,
-    });
+    return deploymentJobRepository.update(id, data);
   },
 
   /**
@@ -53,6 +55,16 @@ export const deploymentJobService = {
    */
   async findById(id: string) {
     return deploymentJobRepository.findById(id);
+  },
+
+  /**
+   * Schedule a delayed retry.
+   */
+  async scheduleRetry(id: string, retryAt: Date) {
+    return deploymentJobRepository.scheduleRetry(
+      id,
+      retryAt
+    );
   },
 
   /**
