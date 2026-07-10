@@ -47,6 +47,14 @@ export const projectRepository = {
     });
   },
 
+  findManyByOwner(ownerId: string) {
+    return prisma.project.findMany({
+      where: { ownerId },
+      orderBy: defaultOrder,
+      include: defaultProjectInclude,
+    });
+  },
+
   findByIdForOwner(id: string, ownerId: string) {
     return prisma.project.findFirst({
       where: {

@@ -22,7 +22,8 @@ export async function GET() {
       );
     }
 
-    const projects = await projectService.getProjects();
+    // Step 3.2: Refactor to filter projects by the authenticated user's ID
+    const projects = await projectService.getProjectsByUserId(session.user.id);
 
     return NextResponse.json(projects);
   } catch (error) {

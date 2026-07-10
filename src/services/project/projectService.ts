@@ -10,6 +10,10 @@ export const projectService = {
     return projectRepository.findAll();
   },
 
+  async getProjectsByUserId(userId: string) {
+    return projectRepository.findManyByOwner(userId);
+  },
+
   async getProject(id: string) {
     const project = await projectRepository.findById(id);
 
@@ -18,6 +22,11 @@ export const projectService = {
     }
 
     return project;
+  },
+
+  async isUserAssociatedWithProject(userId: string, projectId: string) {
+    const project = await projectRepository.findByIdForOwner(projectId, userId);
+    return Boolean(project);
   },
 
   async createProject(

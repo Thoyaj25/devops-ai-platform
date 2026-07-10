@@ -5,20 +5,38 @@ import { authOptions } from "@/lib/auth/config";
 import { permissions } from "@/lib/auth/permissions";
 import { logger } from "@/lib/logger";
 import { deploymentService } from "@/services/deployment/deploymentService";
+import { projectService } from "@/services/project/projectService";
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get("projectId");
     const environmentId = searchParams.get("environmentId");
 
     // Support querying deployments by project or environment
     if (projectId) {
+      // Step 6.1: Validate project access for GET by project
+      const hasAccess = await projectService.isUserAssociatedWithProject(
+        session.user.id,
+        projectId
+      );
+      if (!hasAccess) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
       const deployments = await deploymentService.getProjectDeployments(projectId);
       return NextResponse.json(deployments);
     }
 
     if (environmentId) {
+      // Optional: Add environment-level access validation here if needed
       const deployments = await deploymentService.getEnvironmentDeployments(environmentId);
       return NextResponse.json(deployments);
     }
@@ -55,6 +73,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+
+    // Step 6.1: Validate project access before initiating deployment
+    const hasAccess = await projectService.isUserAssociatedWithProject(
+      session.user.id,
+      body.projectId
+    );
+
+    if (!hasAccess) {
+      return NextResponse.json(
+        { error: "Forbidden" },
+        { status: 403 }
+      );
+    }
 
     const deployment = await deploymentService.initiateDeployment(
       body,
