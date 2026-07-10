@@ -5,6 +5,8 @@ export enum DeploymentStage {
 
   BUILDING = "BUILDING",
 
+  PUSHING = "PUSHING",
+
   TESTING = "TESTING",
 
   DEPLOYING = "DEPLOYING",

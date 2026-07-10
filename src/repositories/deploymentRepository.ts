@@ -23,6 +23,10 @@ const defaultDeploymentInclude = {
       id: true,
       name: true,
       provider: true,
+      repository: true,
+      branch: true,
+      buildCommand: true,
+      deployCommand: true,
     },
   },
 

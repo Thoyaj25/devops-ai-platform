@@ -1,6 +1,19 @@
 export interface DeploymentProvider {
-  checkout(): Promise<void>;
-  build(): Promise<void>;
+  checkout(
+    repository: string,
+    branch: string,
+    workspace: string
+  ): Promise<void>;
+
+  build(
+    workspace: string,
+    command?: string
+  ): Promise<void>;
+
   push(): Promise<void>;
-  deploy(): Promise<void>;
+
+  deploy(
+    workspace: string,
+    command?: string
+  ): Promise<void>;
 }

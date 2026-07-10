@@ -15,7 +15,7 @@ model User {
   role         UserRole   @default(DEVELOPER)
 
   createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  updatedAt    DateTime   @default(now()) @updatedAt
 
   auditLogs    AuditLog[]
   projects     Project[]
@@ -41,7 +41,7 @@ model Project {
   deployments  Deployment[]
 
   createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  updatedAt    DateTime      @default(now()) @updatedAt
 }
 
 model Cluster {
@@ -53,6 +53,7 @@ model Cluster {
   projects  Project[]
 
   createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
 }
 
 model Environment {
@@ -66,6 +67,7 @@ model Environment {
   deployments Deployment[]
 
   createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @default(now()) @updatedAt
 }
 
 model Pipeline {
@@ -73,6 +75,10 @@ model Pipeline {
   name        String
   provider    String?
   repository  String?
+  branch      String?      @default("main")
+
+  buildCommand String?
+  deployCommand String?
 
   projectId   String
   project     Project      @relation(fields: [projectId], references: [id])
@@ -80,6 +86,7 @@ model Pipeline {
   deployments Deployment[]
 
   createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @default(now()) @updatedAt
 }
 
 model Deployment {
@@ -102,6 +109,7 @@ model Deployment {
   logs          String?
 
   createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @default(now()) @updatedAt
 }
 
 model DeploymentJob {
@@ -118,14 +126,14 @@ model DeploymentJob {
   deployment   Deployment @relation(fields: [deploymentId], references: [id])
 
   createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  updatedAt    DateTime   @default(now()) @updatedAt
 }
 
 model WorkerHeartbeat {
   id        String   @id @default(cuid())
   workerId  String   @unique
 
-  lastSeen  DateTime @updatedAt
+  lastSeen  DateTime @default(now()) @updatedAt
   createdAt DateTime @default(now())
 }
 
