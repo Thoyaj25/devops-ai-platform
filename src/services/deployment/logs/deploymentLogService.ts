@@ -18,9 +18,10 @@ export const deploymentLogService = {
   },
 
   /**
-   * Retrieves the logs and status for a deployment.
+   * Retrieves the log content for a deployment.
    */
   async getLogs(deploymentId: string) {
-    return deploymentRepository.findLogs(deploymentId);
+    const deployment = await deploymentRepository.findLogs(deploymentId);
+    return deployment?.logs ?? "";
   },
 };

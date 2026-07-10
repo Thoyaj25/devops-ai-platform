@@ -4,13 +4,22 @@ import { logger } from "@/lib/logger";
 import { runDeploymentWorker } from "@/workers/deploymentWorker";
 
 /**
- * Step 1 — Inspect the worker API
+ * Step 2 — Secure worker route
  * 
- * Refactored to delegate execution to the worker orchestration layer
- * rather than calling the executor directly within the API route.
+ * Validates the request using an environment-specific WORKER_SECRET 
+ * to ensure only authorized internal services can trigger the worker.
  */
 export async function POST(request: NextRequest) {
   try {
+    // Validate request authorization
+    const authHeader = request.headers.get("x-worker-secret");
+    if (!authHeader || authHeader !== process.env.WORKER_SECRET) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { deploymentId, jobId } = body;
 
@@ -40,4 +49,17 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Step 6 — Health endpoints
+ * 
+ * Basic health check for the worker orchestration endpoint.
+ */
+export async function GET() {
+  return NextResponse.json({
+    status: "ok",
+    message: "Worker endpoint is healthy",
+    timestamp: new Date().toISOString(),
+  });
 }

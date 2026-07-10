@@ -1,5 +1,9 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+
+import { authOptions } from "@/lib/auth/config";
 import { deploymentLogService } from "@/services/deployment/logs/deploymentLogService";
+import { deploymentRepository } from "@/repositories/deploymentRepository";
 
 export async function GET(
   request: NextRequest,
@@ -9,49 +13,84 @@ export async function GET(
     params: Promise<{ id: string }>;
   }
 ) {
+  // Step 1: Protect deployment logs API with authentication
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
   const { id } = await params;
+
+  // Optional: Add authorization check here if needed to ensure the user 
+  // owns the project/deployment
 
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
     async start(controller) {
       let previousLogs = "";
+      let closed = false;
+
+      const closeStream = () => {
+        if (!closed) {
+          closed = true;
+          controller.close();
+        }
+      };
 
       const interval = setInterval(async () => {
-        // Step 6: Replace the Prisma query
-        const deployment = await deploymentLogService.getLogs(id);
-
-        if (!deployment) {
+        if (closed) {
           clearInterval(interval);
-          controller.close();
           return;
         }
 
-        if (deployment.logs !== previousLogs) {
-          previousLogs = deployment.logs ?? "";
+        try {
+          // Fetch logs and status together
+          const deployment = await deploymentRepository.findById(id);
+          const logs = await deploymentLogService.getLogs(id);
 
-          controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({
-                logs: previousLogs,
-                status: deployment.status,
-              })}\n\n`
-            )
-          );
-
-          // Step 8: Close the stream when deployment finishes
-          if (
-            deployment.status === "SUCCESS" ||
-            deployment.status === "FAILED"
-          ) {
+          if (!deployment) {
             clearInterval(interval);
-            controller.close();
+            closeStream();
+            return;
           }
+
+          if (logs !== previousLogs) {
+            previousLogs = logs ?? "";
+
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({
+                  logs: previousLogs,
+                  status: deployment.status,
+                })}\n\n`
+              )
+            );
+
+            // Close the stream when deployment finishes
+            if (
+              deployment.status === "SUCCESS" ||
+              deployment.status === "FAILED"
+            ) {
+              clearInterval(interval);
+              closeStream();
+            }
+          }
+        } catch (error) {
+          console.error("Deployment stream error:", error);
+          clearInterval(interval);
+          closeStream();
         }
       }, 1000);
-    },
-    cancel() {
-      // Logic for stream cancellation
+
+      request.signal.addEventListener("abort", () => {
+        clearInterval(interval);
+        closeStream();
+      });
     },
   });
 

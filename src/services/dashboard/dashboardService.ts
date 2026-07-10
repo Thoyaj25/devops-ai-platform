@@ -7,7 +7,7 @@ export const dashboardService = {
   /**
    * Retrieves aggregate counts for the dashboard overview.
    */
-  async getOverview() {
+  async getOverview(_userId?: string) {
     const [
       projects,
       deployments,
