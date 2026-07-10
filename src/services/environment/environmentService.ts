@@ -1,4 +1,4 @@
-import { EnvironmentType } from "@/generated/prisma/client"; // Use your generated client
+import { EnvironmentType } from "@/generated/prisma"; // Use your generated client
 import { createEnvironmentSchema } from "@/lib/validation/environment";
 import { environmentRepository } from "@/repositories/environmentRepository";
 import { projectRepository } from "@/repositories/projectRepository";

@@ -7,7 +7,7 @@ import { deploymentRepository } from "@/repositories/deploymentRepository";
 import { environmentRepository } from "@/repositories/environmentRepository";
 import { pipelineRepository } from "@/repositories/pipelineRepository";
 import { projectRepository } from "@/repositories/projectRepository";
-
+import { deploymentJobService } from "@/services/deployment/deploymentJobService";
 import { auditService } from "@/services/audit/auditService";
 
 export const deploymentService = {
@@ -27,6 +27,21 @@ export const deploymentService = {
     if (!deployment) {
       throw new Error("Deployment not found");
     }
+
+    return deployment;
+  },
+
+  /**
+   * Creates a deployment, records it, and initiates the deployment job.
+   */
+  async initiateDeployment(
+    input: CreateDeploymentInput,
+    ownerId: string
+  ) {
+    const deployment = await this.createDeployment(input, ownerId);
+    
+    // Create deployment job for async worker execution
+    await deploymentJobService.createJob(deployment.id);
 
     return deployment;
   },
