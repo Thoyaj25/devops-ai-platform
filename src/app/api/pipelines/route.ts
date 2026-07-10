@@ -9,33 +9,22 @@ import { pipelineService } from "@/services/pipeline/pipelineService";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-
     const projectId = searchParams.get("projectId");
 
     if (!projectId) {
       return NextResponse.json(
-        {
-          error: "projectId is required",
-        },
-        {
-          status: 400,
-        }
+        { error: "projectId is required" },
+        { status: 400 }
       );
     }
 
     const pipelines = await pipelineService.getProjectPipelines(projectId);
-
     return NextResponse.json(pipelines);
   } catch (error) {
     logger.error({ error }, "Failed to fetch pipelines");
-
     return NextResponse.json(
-      {
-        error: "Failed to fetch pipelines",
-      },
-      {
-        status: 500,
-      }
+      { error: "Failed to fetch pipelines" },
+      { status: 500 }
     );
   }
 }
@@ -54,13 +43,8 @@ export async function POST(request: Request) {
 
     const body = await request.json();
 
-    if (!body.name || !body.projectId) {
-      return NextResponse.json(
-        { error: "Name and projectId are required" },
-        { status: 400 }
-      );
-    }
-
+    // Logic for input validation is now encapsulated in pipelineService.createPipeline
+    // utilizing the Zod schema.
     const pipeline = await pipelineService.createPipeline(
       {
         name: body.name,
@@ -71,19 +55,17 @@ export async function POST(request: Request) {
       session.user.id
     );
 
-    return NextResponse.json(pipeline, {
-      status: 201,
-    });
+    return NextResponse.json(pipeline, { status: 201 });
   } catch (error) {
     logger.error({ error }, "Failed to create pipeline");
 
+    // Catch Zod validation errors specifically if needed, 
+    // or return generic error message for internal failures
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Failed to create pipeline",
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }

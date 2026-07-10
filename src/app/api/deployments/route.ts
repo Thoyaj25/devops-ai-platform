@@ -10,17 +10,12 @@ import { deploymentExecutor } from "@/services/deployment/deploymentExecutor";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-
     const environmentId = searchParams.get("environmentId");
 
     if (!environmentId) {
       return NextResponse.json(
-        {
-          error: "environmentId is required",
-        },
-        {
-          status: 400,
-        }
+        { error: "environmentId is required" },
+        { status: 400 }
       );
     }
 
@@ -30,15 +25,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(deployments);
   } catch (error) {
-    logger.error({ error }, "GET /api/deployments error");
-
+    logger.error({ error }, "Failed to fetch deployments");
     return NextResponse.json(
-      {
-        error: "Failed to fetch deployments",
-      },
-      {
-        status: 500,
-      }
+      { error: "Failed to fetch deployments" },
+      { status: 500 }
     );
   }
 }
@@ -57,48 +47,32 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    const { version, projectId, environmentId, pipelineId } = body;
-
-    if (!projectId || !environmentId || !pipelineId) {
-      return NextResponse.json(
-        {
-          error: "projectId, environmentId and pipelineId are required",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
+    // Delegation: Input validation is now handled inside deploymentService.createDeployment
+    // via Zod schema parsing.
     const deployment = await deploymentService.createDeployment(
       {
-        version,
-        projectId,
-        environmentId,
-        pipelineId,
+        version: body.version,
+        projectId: body.projectId,
+        environmentId: body.environmentId,
+        pipelineId: body.pipelineId,
       },
       session.user.id
     );
 
-    // Temporarily execute deployment directly instead of using deploymentJobService
+    // Execute deployment asynchronously
     deploymentExecutor.execute(deployment.id).catch((err) =>
       logger.error({ err }, "Deployment execution failed")
     );
 
-    return NextResponse.json(deployment, {
-      status: 201,
-    });
+    return NextResponse.json(deployment, { status: 201 });
   } catch (error) {
-    logger.error({ error }, "POST /api/deployments error");
+    logger.error({ error }, "Failed to create deployment");
 
     return NextResponse.json(
       {
-        error:
-          error instanceof Error ? error.message : "Failed to create deployment",
+        error: error instanceof Error ? error.message : "Failed to create deployment",
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }

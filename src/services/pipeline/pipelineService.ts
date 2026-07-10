@@ -1,12 +1,23 @@
+import {
+  createPipelineSchema,
+  type CreatePipelineInput,
+} from "@/lib/validation/pipeline";
+
 import { pipelineRepository } from "@/repositories/pipelineRepository";
 import { projectRepository } from "@/repositories/projectRepository";
 import { auditService } from "@/services/audit/auditService";
 
 export const pipelineService = {
+  /**
+   * Returns all pipelines for a project.
+   */
   async getProjectPipelines(projectId: string) {
     return pipelineRepository.findAllByProject(projectId);
   },
 
+  /**
+   * Returns a single pipeline.
+   */
   async getPipeline(id: string) {
     const pipeline = await pipelineRepository.findById(id);
 
@@ -17,28 +28,40 @@ export const pipelineService = {
     return pipeline;
   },
 
+  /**
+   * Creates a pipeline after validating input
+   * and verifying project ownership.
+   */
   async createPipeline(
-    input: {
-      name: string;
-      provider?: string;
-      repository?: string;
-      projectId: string;
-    },
+    input: CreatePipelineInput,
     ownerId: string
   ) {
-    const project = await projectRepository.findByIdForOwner(input.projectId, ownerId);
+    // Validate request payload
+    const data = createPipelineSchema.parse(input);
+
+    // Verify project ownership
+    const project = await projectRepository.findByIdForOwner(
+      data.projectId,
+      ownerId
+    );
 
     if (!project) {
       throw new Error("Project not found or unauthorized");
     }
 
-    const pipeline = await pipelineRepository.create(input);
+    // Create pipeline
+    const pipeline = await pipelineRepository.create(data);
 
+    // Audit
     await auditService.log({
       action: "CREATE_PIPELINE",
       resource: "PIPELINE",
       userId: ownerId,
-      metadata: { name: pipeline.name, projectId: input.projectId, resourceId: pipeline.id },
+      metadata: {
+        name: pipeline.name,
+        projectId: data.projectId,
+        resourceId: pipeline.id,
+      },
     });
 
     return pipeline;

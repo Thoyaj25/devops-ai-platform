@@ -1,14 +1,26 @@
+import {
+  createDeploymentSchema,
+  type CreateDeploymentInput,
+} from "@/lib/validation/deployment";
+
 import { deploymentRepository } from "@/repositories/deploymentRepository";
 import { environmentRepository } from "@/repositories/environmentRepository";
 import { pipelineRepository } from "@/repositories/pipelineRepository";
 import { projectRepository } from "@/repositories/projectRepository";
+
 import { auditService } from "@/services/audit/auditService";
 
 export const deploymentService = {
+  /**
+   * Returns all deployments for an environment.
+   */
   async getEnvironmentDeployments(environmentId: string) {
     return deploymentRepository.findAllByEnvironment(environmentId);
   },
 
+  /**
+   * Returns a deployment by ID.
+   */
   async getDeployment(id: string) {
     const deployment = await deploymentRepository.findById(id);
 
@@ -19,52 +31,73 @@ export const deploymentService = {
     return deployment;
   },
 
+  /**
+   * Creates a deployment after validating input,
+   * verifying project ownership, and ensuring the
+   * environment and pipeline belong to the project.
+   */
   async createDeployment(
-    input: {
-      version?: string;
-      projectId: string;
-      environmentId: string;
-      pipelineId: string;
-    },
+    input: CreateDeploymentInput,
     ownerId: string
   ) {
-    const project = await projectRepository.findByIdForOwner(input.projectId, ownerId);
+    // Validate request payload
+    const data = createDeploymentSchema.parse(input);
+
+    // Verify project ownership
+    const project = await projectRepository.findByIdForOwner(
+      data.projectId,
+      ownerId
+    );
 
     if (!project) {
       throw new Error("Project not found or unauthorized");
     }
 
-    const environment = await environmentRepository.findById(input.environmentId);
+    // Verify environment exists
+    const environment = await environmentRepository.findById(
+      data.environmentId
+    );
 
     if (!environment) {
       throw new Error("Environment not found");
     }
 
-    if (environment.projectId !== input.projectId) {
-      throw new Error("Environment does not belong to the specified project");
+    // Verify environment belongs to project
+    if (environment.projectId !== data.projectId) {
+      throw new Error(
+        "Environment does not belong to the specified project"
+      );
     }
 
-    const pipeline = await pipelineRepository.findById(input.pipelineId);
+    // Verify pipeline exists
+    const pipeline = await pipelineRepository.findById(
+      data.pipelineId
+    );
 
     if (!pipeline) {
       throw new Error("Pipeline not found");
     }
 
-    if (pipeline.projectId !== input.projectId) {
-      throw new Error("Pipeline does not belong to the specified project");
+    // Verify pipeline belongs to project
+    if (pipeline.projectId !== data.projectId) {
+      throw new Error(
+        "Pipeline does not belong to the specified project"
+      );
     }
 
-    const deployment = await deploymentRepository.create(input);
+    // Create deployment
+    const deployment = await deploymentRepository.create(data);
 
+    // Audit
     await auditService.log({
       action: "CREATE_DEPLOYMENT",
       resource: "DEPLOYMENT",
       userId: ownerId,
       metadata: {
         version: deployment.version,
+        projectId: data.projectId,
         environmentId: deployment.environmentId,
         pipelineId: deployment.pipelineId,
-        projectId: input.projectId,
         resourceId: deployment.id,
       },
     });
