@@ -1,0 +1,1 @@
+export const MAX_DEPLOYMENT_JOB_ATTEMPTS = 3;
