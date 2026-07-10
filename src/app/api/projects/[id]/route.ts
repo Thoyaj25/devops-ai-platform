@@ -10,7 +10,7 @@ type RouteContext = {
 };
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: RouteContext
 ) {
   try {
@@ -18,15 +18,22 @@ export async function GET(
 
     const project = await projectService.getProject(id);
 
-    if (!project) {
+    return NextResponse.json(project);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "Project not found"
+    ) {
       return NextResponse.json(
-        { error: "Project not found" },
-        { status: 404 }
+        {
+          error: "Project not found",
+        },
+        {
+          status: 404,
+        }
       );
     }
 
-    return NextResponse.json(project);
-  } catch (error) {
     logger.error(
       { error },
       "Failed to fetch project"
