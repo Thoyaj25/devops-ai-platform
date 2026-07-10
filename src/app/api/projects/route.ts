@@ -2,24 +2,18 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth/config";
-import { logger } from "@/lib/logger";
 import { permissions } from "@/lib/auth/permissions";
+import { logger } from "@/lib/logger";
 
 import { projectService } from "@/services/project/projectService";
-
 
 export async function GET() {
   try {
     const projects = await projectService.getProjects();
 
     return NextResponse.json(projects);
-
   } catch (error) {
-
-    logger.error(
-      { error },
-      "Failed to fetch projects"
-    );
+    logger.error({ error }, "Failed to fetch projects");
 
     return NextResponse.json(
       {
@@ -32,23 +26,11 @@ export async function GET() {
   }
 }
 
-
-
-export async function POST(
-  request: Request
-) {
-
+export async function POST(request: Request) {
   try {
+    const session = await getServerSession(authOptions);
 
-    const session =
-      await getServerSession(authOptions);
-
-
-    if (
-      !session?.user?.id ||
-      !session.user.role
-    ) {
-
+    if (!session?.user?.id || !session.user.role) {
       return NextResponse.json(
         {
           error: "Unauthorized",
@@ -59,13 +41,7 @@ export async function POST(
       );
     }
 
-
-    if (
-      !permissions.canCreateProject(
-        session.user.role
-      )
-    ) {
-
+    if (!permissions.canCreateProject(session.user.role)) {
       return NextResponse.json(
         {
           error: "Forbidden",
@@ -76,58 +52,21 @@ export async function POST(
       );
     }
 
+    const body = await request.json();
 
-    const body =
-      await request.json();
-
-
-
-    if (
-      !body.name ||
-      typeof body.name !== "string"
-    ) {
-
-      return NextResponse.json(
-        {
-          error: "Project name is required",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-
-
-    const project =
-      await projectService.createProject(
-        {
-          name: body.name,
-          description: body.description,
-        },
-        session.user.id
-      );
-
-
-
-    return NextResponse.json(
-      project,
+    const project = await projectService.createProject(
       {
-        status: 201,
-      }
-    );
-
-
-  } catch (error) {
-
-
-    logger.error(
-      {
-        error,
+        name: body.name,
+        description: body.description,
       },
-      "Failed to create project"
+      session.user.id
     );
 
+    return NextResponse.json(project, {
+      status: 201,
+    });
+  } catch (error) {
+    logger.error({ error }, "Failed to create project");
 
     return NextResponse.json(
       {
@@ -137,6 +76,5 @@ export async function POST(
         status: 500,
       }
     );
-
   }
 }
