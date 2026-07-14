@@ -8,13 +8,14 @@ import { pipelineService } from "@/services/pipeline/pipelineService";
 import { projectService } from "@/services/project/projectService";
 
 /**
- * Step 1 — Open pipeline API
- * GET /api/pipelines: Fetches pipelines for a project
- * POST /api/pipelines: Creates a new pipeline
+ * Step 1 — Inspect the routes
+ * GET /api/pipelines: Fetches all pipelines for a given project.
+ * POST /api/pipelines: Creates a new pipeline within a project.
  */
 
 /**
- * Step 2 — Protect GET /api/pipelines
+ * Step 2 — Standardize GET /api/pipelines
+ * Implements authentication and project-level authorization check.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "projectId is required" }, { status: 400 });
     }
 
-    // Validate project access
+    // Standardize access control: ensure user has access to the project
     const hasAccess = await projectService.isUserAssociatedWithProject(
       session.user.id,
       projectId
@@ -53,7 +54,8 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Step 3 — Protect POST /api/pipelines
+ * Step 3 — Standardize POST /api/pipelines
+ * Implements RBAC and project-level authorization check.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -63,16 +65,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    /**
-     * Step 4 — Add permission check
-     */
+    // Role-based access control check
     if (!permissions.canCreatePipeline(session.user.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
 
-    // Validate project access
+    if (!body.projectId) {
+      return NextResponse.json({ error: "projectId is required" }, { status: 400 });
+    }
+
+    // Standardize: Ensure user has access to the target project before creation
     const hasAccess = await projectService.isUserAssociatedWithProject(
       session.user.id,
       body.projectId
@@ -83,8 +87,9 @@ export async function POST(request: NextRequest) {
     }
 
     /**
-     * Step 5 — Never accept userId from request
-     * Always derive userId from the authenticated server session
+     * Step 5 — Verify you don't trust client identity
+     * Always derive userId from the authenticated server session,
+     * never from the request body.
      */
     const pipeline = await pipelineService.createPipeline(
       {

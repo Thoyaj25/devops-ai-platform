@@ -1,5 +1,6 @@
+import { NotFoundError, BadRequestError } from "@/lib/api/errors";
+
 import {
-  createDeploymentSchema,
   type CreateDeploymentInput,
 } from "@/lib/validation/deployment";
 
@@ -7,120 +8,93 @@ import { deploymentRepository } from "@/repositories/deploymentRepository";
 import { environmentRepository } from "@/repositories/environmentRepository";
 import { pipelineRepository } from "@/repositories/pipelineRepository";
 import { projectRepository } from "@/repositories/projectRepository";
+
 import { deploymentJobService } from "@/services/deployment/deploymentJobService";
 import { auditService } from "@/services/audit/auditService";
 
 export const deploymentService = {
-  /**
-   * Returns all deployments for an environment.
-   */
   async getEnvironmentDeployments(environmentId: string) {
     return deploymentRepository.findAllByEnvironment(environmentId);
   },
 
-  /**
-   * Returns all deployments for a project.
-   */
   async getProjectDeployments(projectId: string) {
     return deploymentRepository.findAllByProject(projectId);
   },
 
-  /**
-   * Returns a deployment by ID.
-   */
   async getDeployment(id: string) {
     const deployment = await deploymentRepository.findById(id);
 
     if (!deployment) {
-      throw new Error("Deployment not found");
+      throw new NotFoundError("Deployment not found");
     }
 
     return deployment;
   },
 
-  /**
-   * Creates a deployment, records it, and initiates the deployment job.
-   */
   async initiateDeployment(
     input: CreateDeploymentInput,
     ownerId: string
   ) {
     const deployment = await this.createDeployment(input, ownerId);
-    
-    // Create deployment job for async worker execution
+
     await deploymentJobService.createJob(deployment.id);
 
     return deployment;
   },
 
-  /**
-   * Creates a deployment after validating input,
-   * verifying project ownership, and ensuring the
-   * environment and pipeline belong to the project.
-   */
   async createDeployment(
     input: CreateDeploymentInput,
     ownerId: string
   ) {
-    // Validate request payload
-    const data = createDeploymentSchema.parse(input);
-
-    // Verify project ownership
     const project = await projectRepository.findByIdForOwner(
-      data.projectId,
+      input.projectId,
       ownerId
     );
 
     if (!project) {
-      throw new Error("Project not found or unauthorized");
+      throw new NotFoundError("Project not found");
     }
 
-    // Verify environment exists
     const environment = await environmentRepository.findById(
-      data.environmentId
+      input.environmentId
     );
 
     if (!environment) {
-      throw new Error("Environment not found");
+      throw new NotFoundError("Environment not found");
     }
 
-    // Verify environment belongs to project
-    if (environment.projectId !== data.projectId) {
-      throw new Error(
+    if (environment.projectId !== input.projectId) {
+      throw new BadRequestError(
         "Environment does not belong to the specified project"
       );
     }
 
-    // Verify pipeline exists
     const pipeline = await pipelineRepository.findById(
-      data.pipelineId
+      input.pipelineId
     );
 
     if (!pipeline) {
-      throw new Error("Pipeline not found");
+      throw new NotFoundError("Pipeline not found");
     }
 
-    // Verify pipeline belongs to project
-    if (pipeline.projectId !== data.projectId) {
-      throw new Error(
+    if (pipeline.projectId !== input.projectId) {
+      throw new BadRequestError(
         "Pipeline does not belong to the specified project"
       );
     }
 
-    // Create deployment
-    const deployment = await deploymentRepository.create(data);
+    const deployment = await deploymentRepository.create(input);
 
-    // Audit
     await auditService.log({
       action: "CREATE_DEPLOYMENT",
       resource: "DEPLOYMENT",
       userId: ownerId,
       metadata: {
+        resourceId: deployment.id,
         version: deployment.version,
-        projectId: data.projectId,
+        projectId: input.projectId,
         environmentId: deployment.environmentId,
         pipelineId: deployment.pipelineId,
-        resourceId: deployment.id,
       },
     });
 

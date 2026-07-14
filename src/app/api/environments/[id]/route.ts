@@ -2,13 +2,15 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth/config";
-import { permissions } from "@/lib/auth/permissions";
 import { logger } from "@/lib/logger";
 
 import { environmentService } from "@/services/environment/environmentService";
 import { projectService } from "@/services/project/projectService";
 
 /**
+ * Step 1 — Inspect the routes
+ * GET /api/environments/:id retrieves a specific environment by ID.
+ * 
  * Step 4 — Protect /api/environments/[id]
  * Ensures only authenticated users with project access can interact with an environment.
  * 
@@ -23,6 +25,10 @@ type Props = {
   }>;
 };
 
+/**
+ * Step 2 — Standardize GET /api/environments/:id
+ * Implements authentication and project-level authorization check.
+ */
 export async function GET(
   _request: Request,
   { params }: Props
@@ -48,7 +54,8 @@ export async function GET(
       );
     }
 
-    // Protect: Validate project access using server-session ID
+    // Standardize access control: ensure the authenticated user 
+    // has access to the requested project.
     const hasAccess = await projectService.isUserAssociatedWithProject(
       session.user.id,
       environment.projectId
@@ -73,7 +80,7 @@ export async function GET(
 }
 
 /**
- * Note: POST logic for creating environments should reside in 
+ * Standardize: POST logic for creating environments resides in 
  * /api/environments/route.ts, not in the [id] dynamic route file.
  */
 export async function POST() {

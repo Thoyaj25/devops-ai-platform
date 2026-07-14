@@ -1,7 +1,9 @@
 import {
-  createProjectSchema,
   type CreateProjectInput,
 } from "@/lib/validation/project";
+
+import { NotFoundError } from "@/lib/api/errors";
+
 import { projectRepository } from "@/repositories/projectRepository";
 import { auditService } from "@/services/audit/auditService";
 
@@ -18,25 +20,30 @@ export const projectService = {
     const project = await projectRepository.findById(id);
 
     if (!project) {
-      throw new Error("Project not found");
+      throw new NotFoundError("Project not found");
     }
 
     return project;
   },
 
-  async isUserAssociatedWithProject(userId: string, projectId: string) {
-    const project = await projectRepository.findByIdForOwner(projectId, userId);
-    return Boolean(project);
+  async isUserAssociatedWithProject(
+    userId: string,
+    projectId: string
+  ) {
+    const project = await projectRepository.findByIdForOwner(
+      projectId,
+      userId
+    );
+
+    return project !== null;
   },
 
   async createProject(
     input: CreateProjectInput,
     ownerId: string
   ) {
-    const data = createProjectSchema.parse(input);
-
     const project = await projectRepository.create({
-      ...data,
+      ...input,
       ownerId,
     });
 
@@ -44,7 +51,10 @@ export const projectService = {
       action: "CREATE_PROJECT",
       resource: "PROJECT",
       userId: ownerId,
-      metadata: { name: project.name, resourceId: project.id },
+      metadata: {
+        resourceId: project.id,
+        name: project.name,
+      },
     });
 
     return project;
