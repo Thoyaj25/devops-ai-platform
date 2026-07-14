@@ -53,7 +53,7 @@ export const deploymentExecutor = {
 
           // Step 2.2: Protect the CLONING stage with a timeout (e.g., 5 minutes)
           await withTimeout(
-            provider.checkout(repository, workspace, branch || "main"),
+            provider.checkout(deploymentId, repository, workspace, branch || "main"),
             300000,
             "Cloning timed out"
           );
@@ -77,7 +77,7 @@ export const deploymentExecutor = {
 
           // Step 2.3: Protect the BUILD stage with a timeout (e.g., 10 minutes)
           await withTimeout(
-            provider.build(workspace, buildCommand || undefined),
+            provider.build(deploymentId, workspace, buildCommand || undefined),
             600000,
             "Build timed out"
           );
@@ -101,7 +101,7 @@ export const deploymentExecutor = {
 
           // Step 2.4: Protect the PUSH stage with a timeout (e.g., 5 minutes)
           await withTimeout(
-            provider.push(),
+            provider.push(deploymentId),
             300000,
             "Push timed out"
           );
@@ -125,7 +125,7 @@ export const deploymentExecutor = {
 
           // Step 2.5: Protect the DEPLOY stage with a timeout (e.g., 5 minutes)
           await withTimeout(
-            provider.deploy(workspace, deployCommand || undefined),
+            provider.deploy(deploymentId, workspace, deployCommand || undefined),
             300000,
             "Deployment timed out"
           );
