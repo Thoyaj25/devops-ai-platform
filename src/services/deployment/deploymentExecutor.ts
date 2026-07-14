@@ -5,6 +5,7 @@ import { workspaceService } from "./workspace/workspaceService";
 import { stageRunner } from "./stageRunner";
 import { DeploymentStage } from "./stages";
 import { deploymentLogService } from "./logs/deploymentLogService";
+import { withTimeout } from "@/lib/utils/timeout"; // Step 2.1: Import the timeout helper
 
 export const deploymentExecutor = {
   async execute(deploymentId: string) {
@@ -50,8 +51,12 @@ export const deploymentExecutor = {
             `Cloning repository ${repository} (branch: ${branch || 'main'})...`
           );
 
-          // Step 2: Fix checkout call
-          await provider.checkout(repository, workspace, branch || "main");
+          // Step 2.2: Protect the CLONING stage with a timeout (e.g., 5 minutes)
+          await withTimeout(
+            provider.checkout(repository, workspace, branch || "main"),
+            300000,
+            "Cloning timed out"
+          );
 
           await deploymentLogService.append(
             deploymentId,
@@ -70,8 +75,12 @@ export const deploymentExecutor = {
             `Building application with command: ${buildCommand || 'default'}...`
           );
 
-          // Step 3: Fix build call
-          await provider.build(workspace, buildCommand || undefined);
+          // Step 2.3: Protect the BUILD stage with a timeout (e.g., 10 minutes)
+          await withTimeout(
+            provider.build(workspace, buildCommand || undefined),
+            600000,
+            "Build timed out"
+          );
 
           await deploymentLogService.append(
             deploymentId,
@@ -90,7 +99,12 @@ export const deploymentExecutor = {
             "Pushing image..."
           );
 
-          await provider.push();
+          // Step 2.4: Protect the PUSH stage with a timeout (e.g., 5 minutes)
+          await withTimeout(
+            provider.push(),
+            300000,
+            "Push timed out"
+          );
 
           await deploymentLogService.append(
             deploymentId,
@@ -109,8 +123,12 @@ export const deploymentExecutor = {
             `Deploying application with command: ${deployCommand || 'default'}...`
           );
 
-          // Step 4: Fix deploy call
-          await provider.deploy(workspace, deployCommand || undefined);
+          // Step 2.5: Protect the DEPLOY stage with a timeout (e.g., 5 minutes)
+          await withTimeout(
+            provider.deploy(workspace, deployCommand || undefined),
+            300000,
+            "Deployment timed out"
+          );
 
           await deploymentLogService.append(
             deploymentId,
@@ -129,7 +147,12 @@ export const deploymentExecutor = {
             "Running verification..."
           );
 
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          // Step 2.6: Protect the VERIFY stage with a timeout (e.g., 1 minute)
+          await withTimeout(
+            new Promise((resolve) => setTimeout(resolve, 1000)),
+            60000,
+            "Verification timed out"
+          );
 
           await deploymentLogService.append(
             deploymentId,
