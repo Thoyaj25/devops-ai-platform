@@ -5,13 +5,13 @@ import { deploymentLogService } from "@/services/deployment/logs/deploymentLogSe
 
 export class DockerDeploymentProvider implements DeploymentProvider {
   async checkout(
-    deploymentId: string, // Step 2: Added deploymentId to all methods
+    deploymentId: string,
     repository: string,
     workspace: string,
     branch: string = "main"
   ): Promise<void> {
     await deploymentLogService.append(deploymentId, `Cloning repository ${repository} (branch: ${branch})...`);
-    
+
     logger.info({ repository, branch, workspace }, "Cloning repository");
 
     const result = await commandRunner.run({
@@ -33,6 +33,7 @@ export class DockerDeploymentProvider implements DeploymentProvider {
     workspace: string,
     command?: string
   ): Promise<void> {
+    // Step 2: Use the provided command which now contains the full image tag
     const buildCommand = command ?? "docker build -t deployment-image .";
     await deploymentLogService.append(deploymentId, `Building with command: ${buildCommand}...`);
 
@@ -54,19 +55,34 @@ export class DockerDeploymentProvider implements DeploymentProvider {
     logger.info({ workspace }, "Build completed");
   }
 
-  async push(deploymentId: string): Promise<void> {
-    await deploymentLogService.append(deploymentId, "Pushing image...");
-    logger.info("Push started");
+  // Step 3 & 4: Simplified push using full image name from environment
+  async push(deploymentId: string, image: string, tag: string): Promise<void> {
+    const registry = process.env.DOCKER_REGISTRY ?? "docker.io";
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    // image is expected to be in the format 'username/repo'
+    const fullImage = `${registry}/${image}:${tag}`;
+
+    await deploymentLogService.append(deploymentId, `Pushing image ${fullImage}...`);
+
+    const pushResult = await commandRunner.run({
+      command: "docker",
+      args: ["push", fullImage],
+      cwd: process.cwd(),
+    });
+
+    if (pushResult.exitCode !== 0) {
+      throw new Error(`Push failed: ${pushResult.stderr}`);
+    }
 
     await deploymentLogService.append(deploymentId, "Push finished");
-    logger.info("Push completed");
+    logger.info({ fullImage }, "Push completed");
   }
 
   async deploy(
     deploymentId: string,
     workspace: string,
+    image: string,
+    tag: string,
     command?: string
   ): Promise<void> {
     const deployCommand = command ?? "echo deployment-placeholder";

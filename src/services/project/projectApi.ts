@@ -1,5 +1,10 @@
 import { Project } from "@/types/project";
 
+interface ApiSuccessResponse<T> {
+  success: true;
+  data: T;
+}
+
 export async function getProjects(): Promise<Project[]> {
   const response = await fetch("/api/projects");
 
@@ -7,7 +12,9 @@ export async function getProjects(): Promise<Project[]> {
     throw new Error("Failed to fetch projects");
   }
 
-  return response.json();
+  const json: ApiSuccessResponse<Project[]> = await response.json();
+
+  return json.data;
 }
 
 export async function getProject(id: string): Promise<Project> {
@@ -17,5 +24,7 @@ export async function getProject(id: string): Promise<Project> {
     throw new Error("Failed to fetch project");
   }
 
-  return response.json();
+  const json: ApiSuccessResponse<Project> = await response.json();
+
+  return json.data;
 }

@@ -35,14 +35,16 @@ export default function EnvironmentList({
           throw new Error("Failed to load environments");
         }
 
-        const data = await response.json();
+        const result = await response.json();
 
-        setEnvironments(data);
+        // Standardized pattern: check for success and extract data
+        if (!result.success) {
+          throw new Error(result.error ?? "Failed to load environments");
+        }
+
+        setEnvironments(Array.isArray(result.data) ? result.data : []);
       } catch (error) {
-        console.error(
-          "Failed to fetch environments:",
-          error
-        );
+        console.error("Failed to fetch environments:", error);
       } finally {
         setLoading(false);
       }
@@ -52,14 +54,12 @@ export default function EnvironmentList({
   }, [projectId]);
 
   if (loading) {
-  return <Spinner />;
-}
+    return <Spinner />;
+  }
 
   return (
     <section className="mt-6">
-      <h2 className="text-xl font-semibold">
-        Environments
-      </h2>
+      <h2 className="text-xl font-semibold">Environments</h2>
 
       {environments.length === 0 ? (
         <EmptyState
@@ -75,9 +75,7 @@ export default function EnvironmentList({
             >
               <Card className="flex items-center justify-between p-4 transition hover:bg-gray-50">
                 <div>
-                  <div className="font-medium">
-                    {environment.name}
-                  </div>
+                  <div className="font-medium">{environment.name}</div>
                 </div>
                 <Badge>{environment.type}</Badge>
               </Card>

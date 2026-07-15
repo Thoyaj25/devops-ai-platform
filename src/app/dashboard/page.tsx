@@ -2,7 +2,6 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
 import { authOptions } from "@/lib/auth/config";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
 import ProjectsList from "@/components/projects/ProjectsList";
 
@@ -14,30 +13,28 @@ export default async function DashboardPage() {
   }
 
   return (
-    <DashboardLayout>
-      <main className="p-8">
-        <h1 className="text-3xl font-bold">
-          OpsPilot Dashboard
-        </h1>
+    <>
+      <h1 className="text-3xl font-bold">
+        OpsPilot Dashboard
+      </h1>
 
-        <p className="mt-2">
-          Welcome, {session.user?.name || "User"}
-        </p>
+      <p className="mt-2">
+        Welcome, {session.user?.name || "User"}
+      </p>
 
-        <p className="mb-8">
-          Role: {session.user?.role || "Developer"}
-        </p>
+      <p className="mb-8">
+        Role: {session.user?.role || "Developer"}
+      </p>
 
-        <DashboardOverview />
+      <DashboardOverview />
 
-        <section className="mt-10">
-          <h2 className="mb-4 text-2xl font-semibold">
-            Projects
-          </h2>
+      <section className="mt-10">
+        <h2 className="mb-4 text-2xl font-semibold">
+          Projects
+        </h2>
 
-          <ProjectsList />
-        </section>
-      </main>
-    </DashboardLayout>
+        <ProjectsList />
+      </section>
+    </>
   );
 }

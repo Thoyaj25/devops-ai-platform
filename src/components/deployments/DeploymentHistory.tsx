@@ -23,6 +23,12 @@ type Deployment = {
   }[];
 };
 
+type ApiResponse<T> = {
+  success: boolean;
+  data: T;
+  error?: string;
+};
+
 export default function DeploymentHistory({
   projectId,
 }: {
@@ -42,8 +48,16 @@ export default function DeploymentHistory({
           throw new Error("Failed to fetch deployments");
         }
 
-        const data = await res.json();
-        setDeployments(data);
+        const result =
+          (await res.json()) as ApiResponse<Deployment[]>;
+
+        if (!result.success) {
+          throw new Error(
+            result.error ?? "Failed to fetch deployments"
+          );
+        }
+
+        setDeployments(result.data ?? []);
       } catch (error) {
         console.error(error);
       } finally {
@@ -79,10 +93,10 @@ export default function DeploymentHistory({
               key={deployment.id}
               className="rounded-lg border p-4"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex justify-between">
                 <div>
                   <p className="font-semibold">
-                    {deployment.version ?? "Unknown Version"}
+                    {deployment.version ?? "Unknown"}
                   </p>
 
                   <p className="text-sm text-gray-500">
@@ -95,9 +109,7 @@ export default function DeploymentHistory({
                 </div>
 
                 <div className="text-right">
-                  <p className="font-medium">
-                    {deployment.status}
-                  </p>
+                  <p>{deployment.status}</p>
 
                   <p className="text-xs text-gray-500">
                     {new Date(
@@ -106,24 +118,6 @@ export default function DeploymentHistory({
                   </p>
                 </div>
               </div>
-
-              {deployment.jobs.length > 0 && (
-                <div className="mt-3 border-t pt-3">
-                  <p className="text-sm font-medium">
-                    Job Status
-                  </p>
-
-                  {deployment.jobs.map((job) => (
-                    <div
-                      key={job.id}
-                      className="mt-1 flex justify-between text-sm"
-                    >
-                      <span>{job.status}</span>
-                      <span>Attempts: {job.attempts}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           ))}
         </div>

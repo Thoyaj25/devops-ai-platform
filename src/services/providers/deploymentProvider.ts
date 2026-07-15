@@ -12,11 +12,17 @@ export interface DeploymentProvider {
     command?: string
   ): Promise<void>;
 
-  push(deploymentId: string): Promise<void>;
+  push(
+    deploymentId: string,
+    image: string,
+    tag: string
+  ): Promise<void>;
 
   deploy(
     deploymentId: string,
     workspace: string,
+    image: string,
+    tag: string,
     command?: string
   ): Promise<void>;
 }

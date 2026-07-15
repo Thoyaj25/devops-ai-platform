@@ -36,17 +36,20 @@ export default function ProjectForm() {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to create project");
+      const result = await response.json();
+
+      // Standardized pattern: check for success and extract data safely
+      if (!response.ok || !result.success) {
+        throw new Error(result.error ?? "Failed to create project");
       }
 
-      const project = await response.json();
+      const project = result.data;
 
       router.push(`/projects/${project.id}`);
       router.refresh();
     } catch (error) {
       console.error(error);
-      alert("Unable to create project.");
+      alert(error instanceof Error ? error.message : "Unable to create project.");
     } finally {
       setLoading(false);
     }

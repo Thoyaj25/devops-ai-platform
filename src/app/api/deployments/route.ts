@@ -4,7 +4,6 @@ import { logger } from "@/lib/logger";
 import { deploymentService } from "@/services/deployment/deploymentService";
 import { projectService } from "@/services/project/projectService";
 
-import { authOptions } from "@/lib/auth/config";
 import { requireAuth } from "@/lib/auth/authorize";
 import { permissions } from "@/lib/auth/permissions";
 
@@ -22,6 +21,8 @@ export async function GET(request: NextRequest) {
     const projectId = searchParams.get("projectId");
     const environmentId = searchParams.get("environmentId");
 
+    let deployments;
+
     if (projectId) {
       const hasAccess =
         await projectService.isUserAssociatedWithProject(
@@ -36,31 +37,34 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      const deployments =
+      deployments =
         await deploymentService.getProjectDeployments(projectId);
-
-      return NextResponse.json(deployments);
-    }
-
-    if (environmentId) {
-      const deployments =
+    } else if (environmentId) {
+      deployments =
         await deploymentService.getEnvironmentDeployments(
           environmentId
         );
-
-      return NextResponse.json(deployments);
+    } else {
+      return NextResponse.json(
+        {
+          error: "projectId or environmentId is required",
+        },
+        {
+          status: 400,
+        }
+      );
     }
 
-    return NextResponse.json(
-      {
-        error: "projectId or environmentId is required",
-      },
-      {
-        status: 400,
-      }
-    );
+    return NextResponse.json({
+      success: true,
+      data: deployments,
+    });
   } catch (error) {
-    logger.error({ error }, "Failed to fetch deployments");
+    logger.error(
+      { error },
+      "Failed to fetch deployments"
+    );
+
     return handleApiError(error);
   }
 }
@@ -70,7 +74,9 @@ export async function POST(request: NextRequest) {
     const session = await requireAuth();
 
     if (
-      !permissions.canCreateDeployment(session.user.role)
+      !permissions.canCreateDeployment(
+        session.user.role
+      )
     ) {
       return NextResponse.json(
         {
@@ -122,11 +128,21 @@ export async function POST(request: NextRequest) {
         session.user.id
       );
 
-    return NextResponse.json(deployment, {
-      status: 201,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        data: deployment,
+      },
+      {
+        status: 201,
+      }
+    );
   } catch (error) {
-    logger.error({ error }, "Failed to create deployment");
+    logger.error(
+      { error },
+      "Failed to create deployment"
+    );
+
     return handleApiError(error);
   }
 }

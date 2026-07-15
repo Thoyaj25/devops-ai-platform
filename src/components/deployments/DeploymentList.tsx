@@ -35,8 +35,15 @@ export default function DeploymentList({
           throw new Error("Failed to load deployments");
         }
 
-        const data = await response.json();
-        setDeployments(data);
+        const result = await response.json();
+
+        // Standardized pattern: check for success and extract data safely
+        if (!result.success) {
+          throw new Error(result.error ?? "Failed to load deployments");
+        }
+
+        // Ensure deployments is always an array
+        setDeployments(Array.isArray(result.data) ? result.data : []);
       } catch (error) {
         console.error("Failed to load deployments:", error);
       } finally {

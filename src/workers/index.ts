@@ -1,21 +1,12 @@
 import "dotenv/config";
-
 import { runDeploymentWorker } from "./deploymentWorker";
 import { logger } from "@/lib/logger";
 
 async function main() {
   logger.info("Deployment worker service starting...");
 
-  // Handle graceful shutdown signals
-  const shutdown = async (signal: string) => {
-    logger.info(`${signal} signal received: closing worker gracefully`);
-    // The worker loop in runDeploymentWorker handles its own shutdown flag
-    process.exit(0);
-  };
-
-  process.on("SIGINT", () => shutdown("SIGINT"));
-  process.on("SIGTERM", () => shutdown("SIGTERM"));
-
+  // The runDeploymentWorker function handles its own graceful shutdown
+  // via the SIGINT/SIGTERM listeners inside it.
   try {
     await runDeploymentWorker();
     logger.info("Deployment worker stopped cleanly");

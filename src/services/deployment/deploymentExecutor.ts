@@ -100,8 +100,14 @@ export const deploymentExecutor = {
           );
 
           // Step 2.4: Protect the PUSH stage with a timeout (e.g., 5 minutes)
+          const image = process.env.DOCKER_IMAGE;
+
+          if (!image) {
+            throw new Error("DOCKER_IMAGE is not configured");
+          }
+
           await withTimeout(
-            provider.push(deploymentId),
+            provider.push(deploymentId, image, deploymentId),
             300000,
             "Push timed out"
           );
@@ -124,8 +130,14 @@ export const deploymentExecutor = {
           );
 
           // Step 2.5: Protect the DEPLOY stage with a timeout (e.g., 5 minutes)
+          const image = process.env.DOCKER_IMAGE;
+
+          if (!image) {
+            throw new Error("DOCKER_IMAGE is not configured");
+          }
+
           await withTimeout(
-            provider.deploy(deploymentId, workspace, deployCommand || undefined),
+            provider.deploy(deploymentId, workspace, image, deploymentId, deployCommand || undefined),
             300000,
             "Deployment timed out"
           );

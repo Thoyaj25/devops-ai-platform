@@ -28,8 +28,14 @@ export default function PipelineList({ projectId }: Props) {
           throw new Error("Failed to fetch pipelines");
         }
 
-        const data = await response.json();
-        setPipelines(data);
+        const result = await response.json();
+
+        // Standardized pattern: check for success and extract data safely
+        if (!result.success) {
+          throw new Error(result.error ?? "Failed to load pipelines");
+        }
+
+        setPipelines(Array.isArray(result.data) ? result.data : []);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
