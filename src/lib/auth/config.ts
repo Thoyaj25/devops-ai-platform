@@ -3,7 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcrypt";
 import { logger } from "@/lib/logger";
 
-import type { UserRole } from "@/generated/prisma/enums";
+import type { UserRole } from "@/generated/prisma";
 import { userRepository } from "@/repositories";
 
 export const authOptions: NextAuthOptions = {

@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { prisma } from "@/lib/prisma";
-import { DeploymentStatus } from "@/generated/prisma/enums";
+import { DeploymentStatus } from "@/generated/prisma";
 
 async function main() {
   await prisma.deployment.updateMany({

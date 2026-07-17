@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth";
 
-import { UserRole } from "@/generated/prisma/enums";
+import { UserRole } from "@/generated/prisma";
 
 import { authOptions } from "@/lib/auth/config";
 

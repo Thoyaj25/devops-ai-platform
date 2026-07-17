@@ -1,4 +1,4 @@
-import { DeploymentStatus } from "@/generated/prisma/enums";
+import { DeploymentStatus } from "@/generated/prisma";
 import { deploymentRepository } from "@/repositories/deploymentRepository";
 import { DeploymentStage } from "./stages";
 import { deploymentLogService } from "./logs/deploymentLogService";

@@ -1,5 +1,5 @@
 import type { Prisma } from "@/generated/prisma";
-import type { UserRole } from "@/generated/prisma/enums";
+import type { UserRole } from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
 
 // Reusable user projection

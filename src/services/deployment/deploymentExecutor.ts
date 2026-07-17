@@ -1,4 +1,4 @@
-import { DeploymentStatus } from "@/generated/prisma/enums";
+import { DeploymentStatus } from "@/generated/prisma";
 import { deploymentRepository } from "@/repositories/deploymentRepository";
 import { DockerDeploymentProvider } from "@/services/providers";
 

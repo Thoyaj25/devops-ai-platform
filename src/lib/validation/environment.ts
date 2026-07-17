@@ -1,4 +1,4 @@
-import { EnvironmentType } from "@/generated/prisma/enums";
+import { EnvironmentType } from "@/generated/prisma";
 import { z } from "zod";
 
 /**

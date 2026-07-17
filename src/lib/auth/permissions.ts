@@ -1,4 +1,4 @@
-import { UserRole } from "@/generated/prisma/enums";
+import { UserRole } from "@/generated/prisma";
 
 export const PERMISSIONS: Record<string, UserRole[]> = {
   CREATE_PROJECT: [UserRole.ADMIN, UserRole.DEVOPS_ENGINEER],

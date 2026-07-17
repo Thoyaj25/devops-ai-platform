@@ -1,5 +1,5 @@
 import type { Prisma } from "@/generated/prisma";
-import type { EnvironmentType } from "@/generated/prisma/enums";
+import type { EnvironmentType } from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
 
 // Reusable include configuration

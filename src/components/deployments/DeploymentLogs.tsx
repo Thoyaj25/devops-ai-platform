@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { DeploymentStatus } from "@/generated/prisma/enums";
+import type { DeploymentStatus } from "@/generated/prisma";
 
 type Props = {
   deploymentId: string;
