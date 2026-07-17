@@ -1,7 +1,8 @@
 import { logger } from "@/lib/logger";
-import { DeploymentProvider } from "./deploymentProvider";
 import { commandRunner } from "@/services/commandRunner/commandRunner";
 import { deploymentLogService } from "@/services/deployment/logs/deploymentLogService";
+
+import { DeploymentProvider } from "./deploymentProvider";
 
 export class DockerDeploymentProvider implements DeploymentProvider {
   async checkout(
@@ -46,7 +47,7 @@ export class DockerDeploymentProvider implements DeploymentProvider {
 
     await deploymentLogService.append(
       deploymentId,
-      "Repository cloned"
+      "Repository cloned successfully"
     );
 
     logger.info(
@@ -61,8 +62,7 @@ export class DockerDeploymentProvider implements DeploymentProvider {
     workspace: string,
     command?: string
   ): Promise<void> {
-    const image =
-      process.env.DOCKER_IMAGE;
+    const image = process.env.DOCKER_IMAGE;
 
     if (!image) {
       throw new Error(
@@ -136,7 +136,9 @@ export class DockerDeploymentProvider implements DeploymentProvider {
 
 
     logger.info(
-      { fullImage },
+      {
+        fullImage,
+      },
       "Docker build completed"
     );
   }
@@ -159,12 +161,14 @@ export class DockerDeploymentProvider implements DeploymentProvider {
 
     await deploymentLogService.append(
       deploymentId,
-      `Pushing ${fullImage}`
+      `Pushing image ${fullImage}`
     );
 
 
     logger.info(
-      { fullImage },
+      {
+        fullImage,
+      },
       "Pushing docker image"
     );
 
@@ -194,7 +198,9 @@ export class DockerDeploymentProvider implements DeploymentProvider {
 
 
     logger.info(
-      { fullImage },
+      {
+        fullImage,
+      },
       "Docker push completed"
     );
   }
@@ -209,24 +215,46 @@ export class DockerDeploymentProvider implements DeploymentProvider {
     command?: string
   ): Promise<void> {
 
+    const registry =
+      process.env.DOCKER_REGISTRY ?? "docker.io";
+
+
+    const fullImage =
+      `${registry}/${image}:${tag}`;
+
+
+    /*
+      Allocate application port.
+      Container always runs on 3000.
+      Host exposes dynamic port.
+    */
+    const port =
+      3000 + Math.floor(Math.random() * 1000);
+
 
     const deployCommand =
       command ??
-      "echo deployment-placeholder";
+      `docker run -d \
+-p ${port}:3000 \
+-e HOSTNAME=0.0.0.0 \
+--name dep-${deploymentId} \
+${fullImage}`;
 
 
     await deploymentLogService.append(
       deploymentId,
-      `Deploying using ${deployCommand}`
+      `Deploying ${fullImage} on port ${port}`
     );
 
 
     logger.info(
       {
         workspace,
+        fullImage,
+        port,
         deployCommand,
       },
-      "Starting deployment"
+      "Starting docker deployment"
     );
 
 
@@ -262,11 +290,15 @@ export class DockerDeploymentProvider implements DeploymentProvider {
 
     await deploymentLogService.append(
       deploymentId,
-      "Deployment finished"
+      `Deployment finished successfully. URL: http://localhost:${port}`
     );
 
 
     logger.info(
+      {
+        fullImage,
+        port,
+      },
       "Deployment completed"
     );
   }
