@@ -1,20 +1,20 @@
-# ---------- Dependencies ----------
+# -------------------------
+# Dependencies
+# -------------------------
 FROM node:22-alpine AS deps
 
 WORKDIR /app
 
-# Copy package manifests
 COPY package*.json ./
-
-# Copy Prisma files before npm ci so postinstall (prisma generate) succeeds
 COPY prisma ./prisma
 COPY prisma.config.ts ./
 
-# Install dependencies
 RUN npm ci
 
 
-# ---------- Builder ----------
+# -------------------------
+# Builder
+# -------------------------
 FROM node:22-alpine AS builder
 
 WORKDIR /app
@@ -22,10 +22,14 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+RUN npx prisma generate
+
 RUN npm run build
 
 
-# ---------- Runner ----------
+# -------------------------
+# Runner
+# -------------------------
 FROM node:22-alpine AS runner
 
 WORKDIR /app
@@ -33,14 +37,14 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
-RUN addgroup -S nextjs && \
-    adduser -S nextjs -G nextjs
-
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-USER nextjs
+COPY --from=builder /app/prisma ./prisma
+
+# VERY IMPORTANT
+COPY --from=builder /app/src/generated ./src/generated
 
 EXPOSE 3000
 

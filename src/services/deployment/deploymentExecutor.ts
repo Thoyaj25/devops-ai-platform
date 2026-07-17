@@ -1,28 +1,39 @@
 import { DeploymentStatus } from "@/generated/prisma/enums";
 import { deploymentRepository } from "@/repositories/deploymentRepository";
 import { DockerDeploymentProvider } from "@/services/providers";
+
 import { workspaceService } from "./workspace/workspaceService";
 import { stageRunner } from "./stageRunner";
 import { DeploymentStage } from "./stages";
 import { deploymentLogService } from "./logs/deploymentLogService";
-import { withTimeout } from "@/lib/utils/timeout"; // Step 2.1: Import the timeout helper
+
+import { withTimeout } from "@/lib/utils/timeout";
 
 export const deploymentExecutor = {
   async execute(deploymentId: string) {
     const provider = new DockerDeploymentProvider();
 
-    // Create an isolated workspace for this deployment
-    const workspace = await workspaceService.prepare(deploymentId);
-    const deployment = await deploymentRepository.findById(deploymentId);
-    
-    // Step 1: Update deployment variables
-    const repository = deployment?.pipeline.repository;
-    const branch = deployment?.pipeline.branch;
-    const buildCommand = deployment?.pipeline.buildCommand;
-    const deployCommand = deployment?.pipeline.deployCommand;
+    const workspace =
+      await workspaceService.prepare(deploymentId);
+
+    const deployment =
+      await deploymentRepository.findById(deploymentId);
+
+    if (!deployment) {
+      throw new Error("Deployment not found");
+    }
+
+    const {
+      repository,
+      branch,
+      buildCommand,
+      deployCommand,
+    } = deployment.pipeline;
 
     if (!repository) {
-      throw new Error("Deployment pipeline repository is not configured");
+      throw new Error(
+        "Deployment pipeline repository is not configured"
+      );
     }
 
     await deploymentLogService.append(
@@ -30,7 +41,6 @@ export const deploymentExecutor = {
       `Workspace prepared: ${workspace}`
     );
 
-    // Mark deployment as running
     await deploymentRepository.update(deploymentId, {
       status: DeploymentStatus.RUNNING,
     });
@@ -41,20 +51,27 @@ export const deploymentExecutor = {
         "Deployment started"
       );
 
-      // CLONING stage
+      // ------------------------
+      // CLONE
+      // ------------------------
+
       await stageRunner.run(
         deploymentId,
         DeploymentStage.CLONING,
         async () => {
           await deploymentLogService.append(
             deploymentId,
-            `Cloning repository ${repository} (branch: ${branch || 'main'})...`
+            `Cloning ${repository} (${branch ?? "main"})`
           );
 
-          // Step 2.2: Protect the CLONING stage with a timeout (e.g., 5 minutes)
           await withTimeout(
-            provider.checkout(deploymentId, repository, workspace, branch || "main"),
-            300000,
+            provider.checkout(
+              deploymentId,
+              repository,
+              workspace,
+              branch ?? "main"
+            ),
+            5 * 60 * 1000,
             "Cloning timed out"
           );
 
@@ -65,20 +82,26 @@ export const deploymentExecutor = {
         }
       );
 
-      // BUILD stage
+      // ------------------------
+      // BUILD
+      // ------------------------
+
       await stageRunner.run(
         deploymentId,
         DeploymentStage.BUILDING,
         async () => {
           await deploymentLogService.append(
             deploymentId,
-            `Building application with command: ${buildCommand || 'default'}...`
+            `Running build (${buildCommand ?? "default"})`
           );
 
-          // Step 2.3: Protect the BUILD stage with a timeout (e.g., 10 minutes)
           await withTimeout(
-            provider.build(deploymentId, workspace, buildCommand || undefined),
-            600000,
+            provider.build(
+              deploymentId,
+              workspace,
+              buildCommand ?? undefined
+            ),
+            10 * 60 * 1000,
             "Build timed out"
           );
 
@@ -89,80 +112,102 @@ export const deploymentExecutor = {
         }
       );
 
-      // PUSH stage
+      // ------------------------
+      // PUSH
+      // ------------------------
+
       await stageRunner.run(
         deploymentId,
         DeploymentStage.PUSHING,
         async () => {
-          await deploymentLogService.append(
-            deploymentId,
-            "Pushing image..."
-          );
-
-          // Step 2.4: Protect the PUSH stage with a timeout (e.g., 5 minutes)
           const image = process.env.DOCKER_IMAGE;
 
           if (!image) {
-            throw new Error("DOCKER_IMAGE is not configured");
+            throw new Error(
+              "DOCKER_IMAGE is not configured"
+            );
           }
 
+          await deploymentLogService.append(
+            deploymentId,
+            "Pushing image"
+          );
+
           await withTimeout(
-            provider.push(deploymentId, image, deploymentId),
-            300000,
+            provider.push(
+              deploymentId,
+              image,
+              deploymentId
+            ),
+            5 * 60 * 1000,
             "Push timed out"
           );
 
           await deploymentLogService.append(
             deploymentId,
-            "Push finished"
+            "Push completed"
           );
         }
       );
 
-      // DEPLOY stage
+      // ------------------------
+      // DEPLOY
+      // ------------------------
+
       await stageRunner.run(
         deploymentId,
         DeploymentStage.DEPLOYING,
         async () => {
-          await deploymentLogService.append(
-            deploymentId,
-            `Deploying application with command: ${deployCommand || 'default'}...`
-          );
-
-          // Step 2.5: Protect the DEPLOY stage with a timeout (e.g., 5 minutes)
           const image = process.env.DOCKER_IMAGE;
 
           if (!image) {
-            throw new Error("DOCKER_IMAGE is not configured");
+            throw new Error(
+              "DOCKER_IMAGE is not configured"
+            );
           }
 
+          await deploymentLogService.append(
+            deploymentId,
+            `Deploying (${deployCommand ?? "default"})`
+          );
+
           await withTimeout(
-            provider.deploy(deploymentId, workspace, image, deploymentId, deployCommand || undefined),
-            300000,
+            provider.deploy(
+              deploymentId,
+              workspace,
+              image,
+              deploymentId,
+              deployCommand ?? undefined
+            ),
+            5 * 60 * 1000,
             "Deployment timed out"
           );
 
           await deploymentLogService.append(
             deploymentId,
-            "Deployment finished"
+            "Deployment completed"
           );
         }
       );
 
-      // VERIFY stage
+      // ------------------------
+      // VERIFY
+      // ------------------------
+
       await stageRunner.run(
         deploymentId,
         DeploymentStage.VERIFYING,
         async () => {
           await deploymentLogService.append(
             deploymentId,
-            "Running verification..."
+            "Running verification"
           );
 
-          // Step 2.6: Protect the VERIFY stage with a timeout (e.g., 1 minute)
           await withTimeout(
-            new Promise((resolve) => setTimeout(resolve, 1000)),
-            60000,
+            new Promise((resolve) =>
+              setTimeout(resolve, 1000)
+            ),
+            60 * 1000,
             "Verification timed out"
           );
 
@@ -178,28 +223,41 @@ export const deploymentExecutor = {
         "Deployment completed successfully"
       );
 
-      return await deploymentRepository.update(deploymentId, {
-        status: DeploymentStatus.SUCCESS,
-      });
+      return await deploymentRepository.update(
+        deploymentId,
+        {
+          status: DeploymentStatus.SUCCESS,
+        }
+      );
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Unknown error";
+        error instanceof Error
+          ? error.message
+          : "Unknown error";
 
       await deploymentLogService.append(
         deploymentId,
         `Deployment failed: ${message}`
       );
 
-      return await deploymentRepository.update(deploymentId, {
+      await deploymentRepository.update(deploymentId, {
         status: DeploymentStatus.FAILED,
       });
+
+      // IMPORTANT:
+      // Propagate the error so the worker can retry
+      throw error;
     } finally {
       await workspaceService.cleanup(deploymentId);
 
-      await deploymentLogService.append(
-        deploymentId,
-        "Workspace cleaned up"
-      );
+      try {
+        await deploymentLogService.append(
+          deploymentId,
+          "Workspace cleaned up"
+        );
+      } catch {
+        // Ignore cleanup logging failures.
+      }
     }
   },
 };

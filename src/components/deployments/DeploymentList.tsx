@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import Badge from "@/components/ui/Badge";
@@ -37,15 +38,21 @@ export default function DeploymentList({
 
         const result = await response.json();
 
-        // Standardized pattern: check for success and extract data safely
+        // Standardized API response handling
         if (!result.success) {
-          throw new Error(result.error ?? "Failed to load deployments");
+          throw new Error(
+            result.error ?? "Failed to load deployments"
+          );
         }
 
-        // Ensure deployments is always an array
-        setDeployments(Array.isArray(result.data) ? result.data : []);
+        setDeployments(
+          Array.isArray(result.data) ? result.data : []
+        );
       } catch (error) {
-        console.error("Failed to load deployments:", error);
+        console.error(
+          "Failed to load deployments:",
+          error
+        );
       } finally {
         setLoading(false);
       }
@@ -72,26 +79,29 @@ export default function DeploymentList({
       ) : (
         <div className="mt-4 space-y-4">
           {deployments.map((deployment) => (
-            <Card
+            <Link
               key={deployment.id}
-              className="flex items-center justify-between hover:bg-gray-50"
+              href={`/deployments/${deployment.id}`}
+              className="block"
             >
-              <div>
-                <h3 className="font-semibold">
-                  {deployment.version ?? "Unknown Version"}
-                </h3>
+              <Card className="flex cursor-pointer items-center justify-between transition-colors hover:bg-gray-50 hover:shadow-md">
+                <div>
+                  <h3 className="font-semibold">
+                    {deployment.version ?? "Unknown Version"}
+                  </h3>
 
-                <p className="mt-1 text-sm text-gray-500">
-                  {new Date(
-                    deployment.createdAt
-                  ).toLocaleString()}
-                </p>
-              </div>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {new Date(
+                      deployment.createdAt
+                    ).toLocaleString()}
+                  </p>
+                </div>
 
-              <Badge>
-                {deployment.status}
-              </Badge>
-            </Card>
+                <Badge>
+                  {deployment.status}
+                </Badge>
+              </Card>
+            </Link>
           ))}
         </div>
       )}

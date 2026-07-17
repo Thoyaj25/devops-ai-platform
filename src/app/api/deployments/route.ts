@@ -71,13 +71,17 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("STEP 0: Starting POST /api/deployments");
+
     const session = await requireAuth();
+    console.log("STEP 1: Auth check passed for user", session.user.id);
 
     if (
       !permissions.canCreateDeployment(
         session.user.role
       )
     ) {
+      console.log("STEP 2: Forbidden - Insufficient role", session.user.role);
       return NextResponse.json(
         {
           error: "Forbidden",
@@ -88,12 +92,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log("STEP 3: Validating request schema");
     const validation = await validateRequest(
       request,
       createDeploymentSchema
     );
 
     if (!validation.success) {
+      console.log("STEP 3.1: Validation failed", validation.error);
       return NextResponse.json(
         {
           error: "Invalid request",
@@ -105,6 +111,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log("STEP 4: Checking project access for", validation.data.projectId);
     const hasAccess =
       await projectService.isUserAssociatedWithProject(
         session.user.id,
@@ -112,6 +119,7 @@ export async function POST(request: NextRequest) {
       );
 
     if (!hasAccess) {
+      console.log("STEP 4.1: Forbidden - User not associated with project");
       return NextResponse.json(
         {
           error: "Forbidden",
@@ -122,12 +130,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log("STEP 5: Initiating deployment");
     const deployment =
       await deploymentService.initiateDeployment(
         validation.data,
         session.user.id
       );
 
+    console.log("STEP 6: Deployment created successfully", deployment.id);
     return NextResponse.json(
       {
         success: true,
@@ -138,6 +148,7 @@ export async function POST(request: NextRequest) {
       }
     );
   } catch (error) {
+    console.log("STEP ERROR: Deployment failed", error);
     logger.error(
       { error },
       "Failed to create deployment"

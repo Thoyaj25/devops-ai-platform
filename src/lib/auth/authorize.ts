@@ -20,7 +20,17 @@ export async function authorize() {
 }
 
 export async function requireAuth() {
-  return authorize();
+  const session = await getServerSession(authOptions);
+  
+  console.log("AUTH_CHECK_SESSION:", session);
+
+  if (!session?.user?.id || !session.user.role) {
+    console.log("AUTH_CHECK_FAILED: Unauthorized");
+    throw new UnauthorizedError();
+  }
+
+  console.log("AUTH_CHECK_SUCCESS:", session.user.id, session.user.role);
+  return session;
 }
 
 export async function authorizeRole(
