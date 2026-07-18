@@ -1,3 +1,9 @@
+export type DeployResult = {
+  containerId: string;
+  hostPort: number;
+  containerUrl: string;
+};
+
 export interface DeploymentProvider {
   checkout(
     deploymentId: string,
@@ -24,5 +30,5 @@ export interface DeploymentProvider {
     image: string,
     tag: string,
     command?: string
-  ): Promise<void>;
+  ): Promise<DeployResult>;
 }

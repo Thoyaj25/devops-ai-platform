@@ -1,4 +1,12 @@
 import "dotenv/config";
+
+// Temporary log to verify environment variables
+console.log({
+  DOCKER_IMAGE: !!process.env.DOCKER_IMAGE,
+  DOCKER_REGISTRY: !!process.env.DOCKER_REGISTRY,
+  DATABASE_URL: !!process.env.DATABASE_URL,
+});
+
 import { runDeploymentWorker } from "./deploymentWorker";
 import { logger } from "@/lib/logger";
 

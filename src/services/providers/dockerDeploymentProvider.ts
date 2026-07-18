@@ -1,8 +1,9 @@
-import { logger } from "@/lib/logger";
 import { commandRunner } from "@/services/commandRunner/commandRunner";
 import { deploymentLogService } from "@/services/deployment/logs/deploymentLogService";
-
-import { DeploymentProvider } from "./deploymentProvider";
+import {
+  DeploymentProvider,
+  DeployResult,
+} from "./deploymentProvider";
 
 export class DockerDeploymentProvider implements DeploymentProvider {
   async checkout(
@@ -14,15 +15,6 @@ export class DockerDeploymentProvider implements DeploymentProvider {
     await deploymentLogService.append(
       deploymentId,
       `Cloning repository ${repository} (${branch})`
-    );
-
-    logger.info(
-      {
-        repository,
-        branch,
-        workspace,
-      },
-      "Cloning repository"
     );
 
     const result = await commandRunner.run({
@@ -40,22 +32,14 @@ export class DockerDeploymentProvider implements DeploymentProvider {
     });
 
     if (result.exitCode !== 0) {
-      throw new Error(
-        `Git clone failed: ${result.stderr}`
-      );
+      throw new Error(`Git clone failed: ${result.stderr}`);
     }
 
     await deploymentLogService.append(
       deploymentId,
       "Repository cloned successfully"
     );
-
-    logger.info(
-      { workspace },
-      "Repository cloned successfully"
-    );
   }
-
 
   async build(
     deploymentId: string,
@@ -65,147 +49,72 @@ export class DockerDeploymentProvider implements DeploymentProvider {
     const image = process.env.DOCKER_IMAGE;
 
     if (!image) {
-      throw new Error(
-        "DOCKER_IMAGE is not configured"
-      );
+      throw new Error("DOCKER_IMAGE is not configured");
     }
 
-    const registry =
-      process.env.DOCKER_REGISTRY ?? "docker.io";
-
-
-    const fullImage =
-      `${registry}/${image}:${deploymentId}`;
-
+    const registry = process.env.DOCKER_REGISTRY ?? "docker.io";
+    const fullImage = `${registry}/${image}:${deploymentId}`;
 
     const buildCommand =
-      command ??
-      `docker build -t ${fullImage} .`;
-
+      command ?? `docker build -t ${fullImage} .`;
 
     await deploymentLogService.append(
       deploymentId,
       `Building image ${fullImage}`
     );
 
-
-    logger.info(
-      {
-        workspace,
-        fullImage,
-        buildCommand,
-      },
-      "Starting docker build"
-    );
-
-
-    const result =
-      await commandRunner.run({
-        command: "sh",
-        args: [
-          "-c",
-          buildCommand,
-        ],
-        cwd: workspace,
-
-        onStdout: (data) =>
-          deploymentLogService.append(
-            deploymentId,
-            data
-          ),
-
-        onStderr: (data) =>
-          deploymentLogService.append(
-            deploymentId,
-            data
-          ),
-      });
-
+    const result = await commandRunner.run({
+      command: "sh",
+      args: ["-c", buildCommand],
+      cwd: workspace,
+      onStdout: (data) =>
+        deploymentLogService.append(deploymentId, data),
+      onStderr: (data) =>
+        deploymentLogService.append(deploymentId, data),
+    });
 
     if (result.exitCode !== 0) {
-      throw new Error(
-        `Build failed: ${result.stderr}`
-      );
+      throw new Error(`Build failed: ${result.stderr}`);
     }
-
 
     await deploymentLogService.append(
       deploymentId,
-      `Image built successfully ${fullImage}`
-    );
-
-
-    logger.info(
-      {
-        fullImage,
-      },
-      "Docker build completed"
+      "Build completed successfully"
     );
   }
-
-
 
   async push(
     deploymentId: string,
     image: string,
     tag: string
   ): Promise<void> {
-
-    const registry =
-      process.env.DOCKER_REGISTRY ?? "docker.io";
-
-
-    const fullImage =
-      `${registry}/${image}:${tag}`;
-
+    const registry = process.env.DOCKER_REGISTRY ?? "docker.io";
+    const fullImage = `${registry}/${image}:${tag}`;
 
     await deploymentLogService.append(
       deploymentId,
-      `Pushing image ${fullImage}`
+      `Pushing ${fullImage}`
     );
 
-
-    logger.info(
-      {
-        fullImage,
-      },
-      "Pushing docker image"
-    );
-
-
-    const result =
-      await commandRunner.run({
-        command: "docker",
-        args: [
-          "push",
-          fullImage,
-        ],
-        cwd: process.cwd(),
-      });
-
+    const result = await commandRunner.run({
+      command: "docker",
+      args: ["push", fullImage],
+      cwd: process.cwd(),
+      onStdout: (data) =>
+        deploymentLogService.append(deploymentId, data),
+      onStderr: (data) =>
+        deploymentLogService.append(deploymentId, data),
+    });
 
     if (result.exitCode !== 0) {
-      throw new Error(
-        `Push failed: ${result.stderr}`
-      );
+      throw new Error(`Push failed: ${result.stderr}`);
     }
-
 
     await deploymentLogService.append(
       deploymentId,
-      "Image push completed"
-    );
-
-
-    logger.info(
-      {
-        fullImage,
-      },
-      "Docker push completed"
+      "Image pushed successfully"
     );
   }
-
-
 
   async deploy(
     deploymentId: string,
@@ -213,93 +122,80 @@ export class DockerDeploymentProvider implements DeploymentProvider {
     image: string,
     tag: string,
     command?: string
-  ): Promise<void> {
+  ): Promise<DeployResult> {
+    const registry = process.env.DOCKER_REGISTRY ?? "docker.io";
+    const fullImage = `${registry}/${image}:${tag}`;
 
-    const registry =
-      process.env.DOCKER_REGISTRY ?? "docker.io";
+    const containerName = `dep-${deploymentId}`;
+    const port = 3000 + Math.floor(Math.random() * 1000);
 
+    await deploymentLogService.append(
+      deploymentId,
+      `Removing any existing container named ${containerName}`
+    );
 
-    const fullImage =
-      `${registry}/${image}:${tag}`;
+    // Ignore errors if container doesn't exist
+    await commandRunner.run({
+      command: "docker",
+      args: ["rm", "-f", containerName],
+      cwd: workspace,
+    });
 
+    const envVars = [
+      "DATABASE_URL",
+      "NEXTAUTH_SECRET",
+      "NEXTAUTH_URL",
+      "ADMIN_USER",
+      "ADMIN_PASS",
+      "NODE_ENV",
+    ];
 
-    /*
-      Allocate application port.
-      Container always runs on 3000.
-      Host exposes dynamic port.
-    */
-    const port =
-      3000 + Math.floor(Math.random() * 1000);
-
+    const envArgs = envVars
+      .filter((key) => process.env[key])
+      .map((key) => `-e ${key}="${process.env[key]}"`)
+      .join(" ");
 
     const deployCommand =
       command ??
-      `docker run -d \
+      `
+docker run -d \
+--name ${containerName} \
 -p ${port}:3000 \
 -e HOSTNAME=0.0.0.0 \
---name dep-${deploymentId} \
-${fullImage}`;
-
+${envArgs} \
+${fullImage}
+      `.trim();
 
     await deploymentLogService.append(
       deploymentId,
       `Deploying ${fullImage} on port ${port}`
     );
 
-
-    logger.info(
-      {
-        workspace,
-        fullImage,
-        port,
-        deployCommand,
-      },
-      "Starting docker deployment"
-    );
-
-
-    const result =
-      await commandRunner.run({
-        command: "sh",
-        args: [
-          "-c",
-          deployCommand,
-        ],
-        cwd: workspace,
-
-        onStdout: (data) =>
-          deploymentLogService.append(
-            deploymentId,
-            data
-          ),
-
-        onStderr: (data) =>
-          deploymentLogService.append(
-            deploymentId,
-            data
-          ),
-      });
-
+    const result = await commandRunner.run({
+      command: "sh",
+      args: ["-c", deployCommand],
+      cwd: workspace,
+      onStdout: (data) =>
+        deploymentLogService.append(deploymentId, data),
+      onStderr: (data) =>
+        deploymentLogService.append(deploymentId, data),
+    });
 
     if (result.exitCode !== 0) {
-      throw new Error(
-        `Deploy failed: ${result.stderr}`
-      );
+      throw new Error(`Deploy failed: ${result.stderr}`);
     }
 
+    const containerId = result.stdout.trim();
 
     await deploymentLogService.append(
       deploymentId,
-      `Deployment finished successfully. URL: http://localhost:${port}`
+      `Container started: ${containerId}`
     );
 
-
-    logger.info(
-      {
-        fullImage,
-        port,
-      },
-      "Deployment completed"
-    );
+    return {
+      containerId,
+      hostPort: port,
+      containerUrl: `http://localhost:${port}`,
+    };
   }
 }

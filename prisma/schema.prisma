@@ -75,12 +75,22 @@ model Deployment {
   id            String           @id @default(cuid())
   version       String?
   status        DeploymentStatus @default(RUNNING)
+
   projectId     String
   environmentId String
   pipelineId    String
+
   logs          String?
+
+  // Runtime deployment metadata
+  hostPort      Int?
+  containerId   String?
+  containerUrl  String?
+  isHealthy     Boolean          @default(false)
+
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @default(now()) @updatedAt
+
   environment   Environment      @relation(fields: [environmentId], references: [id])
   pipeline      Pipeline         @relation(fields: [pipelineId], references: [id])
   project       Project          @relation(fields: [projectId], references: [id])

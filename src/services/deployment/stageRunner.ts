@@ -4,36 +4,45 @@ import { DeploymentStage } from "./stages";
 import { deploymentLogService } from "./logs/deploymentLogService";
 
 export const stageRunner = {
-  async run(
+  async run<T>(
     deploymentId: string,
     stage: DeploymentStage,
-    action: () => Promise<void>
-  ) {
+    action: () => Promise<T>
+  ): Promise<T> {
     const message = `Starting stage: ${stage}`;
 
     await deploymentLogService.append(deploymentId, message);
     console.log(`[${deploymentId}] ${message}`);
 
     try {
-      await action();
+      const result = await action();
 
       await deploymentLogService.append(
         deploymentId,
         `Completed stage: ${stage}`
       );
-      console.log(`[${deploymentId}] Completed stage: ${stage}`);
+
+      console.log(
+        `[${deploymentId}] Completed stage: ${stage}`
+      );
+
+      return result;
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
+        error instanceof Error
+          ? error.message
+          : "Unknown error";
 
       await deploymentLogService.append(
         deploymentId,
         `Failed stage ${stage}: ${errorMessage}`
       );
 
-      console.error(`[${deploymentId}] Failed stage: ${stage}`, error);
+      console.error(
+        `[${deploymentId}] Failed stage: ${stage}`,
+        error
+      );
 
-      // Refactored: Use repository instead of direct prisma call
       await deploymentRepository.update(deploymentId, {
         status: DeploymentStatus.FAILED,
       });
