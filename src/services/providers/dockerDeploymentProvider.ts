@@ -3,6 +3,7 @@ import { deploymentLogService } from "@/services/deployment/logs/deploymentLogSe
 import {
   DeploymentProvider,
   DeployResult,
+  ContainerInfo,
 } from "./deploymentProvider";
 
 export class DockerDeploymentProvider implements DeploymentProvider {
@@ -41,6 +42,7 @@ export class DockerDeploymentProvider implements DeploymentProvider {
     );
   }
 
+
   async build(
     deploymentId: string,
     workspace: string,
@@ -52,8 +54,11 @@ export class DockerDeploymentProvider implements DeploymentProvider {
       throw new Error("DOCKER_IMAGE is not configured");
     }
 
-    const registry = process.env.DOCKER_REGISTRY ?? "docker.io";
-    const fullImage = `${registry}/${image}:${deploymentId}`;
+    const registry =
+      process.env.DOCKER_REGISTRY ?? "docker.io";
+
+    const fullImage =
+      `${registry}/${image}:${deploymentId}`;
 
     const buildCommand =
       command ?? `docker build -t ${fullImage} .`;
@@ -83,13 +88,17 @@ export class DockerDeploymentProvider implements DeploymentProvider {
     );
   }
 
+
   async push(
     deploymentId: string,
     image: string,
     tag: string
   ): Promise<void> {
-    const registry = process.env.DOCKER_REGISTRY ?? "docker.io";
-    const fullImage = `${registry}/${image}:${tag}`;
+    const registry =
+      process.env.DOCKER_REGISTRY ?? "docker.io";
+
+    const fullImage =
+      `${registry}/${image}:${tag}`;
 
     await deploymentLogService.append(
       deploymentId,
@@ -98,7 +107,10 @@ export class DockerDeploymentProvider implements DeploymentProvider {
 
     const result = await commandRunner.run({
       command: "docker",
-      args: ["push", fullImage],
+      args: [
+        "push",
+        fullImage,
+      ],
       cwd: process.cwd(),
       onStdout: (data) =>
         deploymentLogService.append(deploymentId, data),
@@ -116,6 +128,7 @@ export class DockerDeploymentProvider implements DeploymentProvider {
     );
   }
 
+
   async deploy(
     deploymentId: string,
     workspace: string,
@@ -123,23 +136,35 @@ export class DockerDeploymentProvider implements DeploymentProvider {
     tag: string,
     command?: string
   ): Promise<DeployResult> {
-    const registry = process.env.DOCKER_REGISTRY ?? "docker.io";
-    const fullImage = `${registry}/${image}:${tag}`;
+    const registry =
+      process.env.DOCKER_REGISTRY ?? "docker.io";
 
-    const containerName = `dep-${deploymentId}`;
-    const port = 3000 + Math.floor(Math.random() * 1000);
+    const fullImage =
+      `${registry}/${image}:${tag}`;
+
+    const containerName =
+      `dep-${deploymentId}`;
+
+    const hostPort =
+      3000 + Math.floor(Math.random() * 1000);
+
 
     await deploymentLogService.append(
       deploymentId,
-      `Removing any existing container named ${containerName}`
+      `Removing existing container ${containerName}`
     );
 
-    // Ignore errors if container doesn't exist
+
     await commandRunner.run({
       command: "docker",
-      args: ["rm", "-f", containerName],
+      args: [
+        "rm",
+        "-f",
+        containerName,
+      ],
       cwd: workspace,
     });
+
 
     const envVars = [
       "DATABASE_URL",
@@ -150,52 +175,191 @@ export class DockerDeploymentProvider implements DeploymentProvider {
       "NODE_ENV",
     ];
 
+
     const envArgs = envVars
       .filter((key) => process.env[key])
-      .map((key) => `-e ${key}="${process.env[key]}"`)
-      .join(" ");
+      .flatMap((key) => [
+        "-e",
+        `${key}=${process.env[key]}`,
+      ]);
 
-    const deployCommand =
-      command ??
-      `
-docker run -d \
---name ${containerName} \
--p ${port}:3000 \
--e HOSTNAME=0.0.0.0 \
-${envArgs} \
-${fullImage}
-      `.trim();
 
-    await deploymentLogService.append(
-      deploymentId,
-      `Deploying ${fullImage} on port ${port}`
-    );
+    const dockerArgs = [
+      "run",
+      "-d",
+      "--name",
+      containerName,
+      "-p",
+      `${hostPort}:3000`,
+      "-e",
+      "HOSTNAME=0.0.0.0",
+      ...envArgs,
+      fullImage,
+    ];
 
-    const result = await commandRunner.run({
-      command: "sh",
-      args: ["-c", deployCommand],
-      cwd: workspace,
-      onStdout: (data) =>
-        deploymentLogService.append(deploymentId, data),
-      onStderr: (data) =>
-        deploymentLogService.append(deploymentId, data),
-    });
+
+    const result = command
+      ? await commandRunner.run({
+          command: "sh",
+          args: ["-c", command],
+          cwd: workspace,
+          onStdout: (data) =>
+            deploymentLogService.append(deploymentId, data),
+          onStderr: (data) =>
+            deploymentLogService.append(deploymentId, data),
+        })
+      : await commandRunner.run({
+          command: "docker",
+          args: dockerArgs,
+          cwd: workspace,
+          onStdout: (data) =>
+            deploymentLogService.append(deploymentId, data),
+          onStderr: (data) =>
+            deploymentLogService.append(deploymentId, data),
+        });
+
 
     if (result.exitCode !== 0) {
-      throw new Error(`Deploy failed: ${result.stderr}`);
+      throw new Error(
+        `Deploy failed: ${result.stderr}`
+      );
     }
 
-    const containerId = result.stdout.trim();
+
+    const containerId =
+      result.stdout.trim();
+
 
     await deploymentLogService.append(
       deploymentId,
       `Container started: ${containerId}`
     );
 
+
     return {
       containerId,
-      hostPort: port,
-      containerUrl: `http://localhost:${port}`,
+      hostPort,
+      containerUrl:
+        `http://localhost:${hostPort}`,
+    };
+  }
+
+
+
+  async stop(
+    containerId: string
+  ): Promise<void> {
+    const result =
+      await commandRunner.run({
+        command: "docker",
+        args: [
+          "stop",
+          containerId,
+        ],
+        cwd: process.cwd(),
+      });
+
+    if (result.exitCode !== 0) {
+      throw new Error(result.stderr);
+    }
+  }
+
+
+
+  async start(
+    containerId: string
+  ): Promise<void> {
+    const result =
+      await commandRunner.run({
+        command: "docker",
+        args: [
+          "start",
+          containerId,
+        ],
+        cwd: process.cwd(),
+      });
+
+    if (result.exitCode !== 0) {
+      throw new Error(result.stderr);
+    }
+  }
+
+
+
+  async restart(
+    containerId: string
+  ): Promise<void> {
+    const result =
+      await commandRunner.run({
+        command: "docker",
+        args: [
+          "restart",
+          containerId,
+        ],
+        cwd: process.cwd(),
+      });
+
+    if (result.exitCode !== 0) {
+      throw new Error(result.stderr);
+    }
+  }
+
+
+
+  async remove(
+    containerId: string
+  ): Promise<void> {
+    const result =
+      await commandRunner.run({
+        command: "docker",
+        args: [
+          "rm",
+          "-f",
+          containerId,
+        ],
+        cwd: process.cwd(),
+      });
+
+    if (result.exitCode !== 0) {
+      throw new Error(result.stderr);
+    }
+  }
+
+
+
+  async inspect(
+    containerId: string
+  ): Promise<ContainerInfo> {
+
+    const result =
+      await commandRunner.run({
+        command: "docker",
+        args: [
+          "inspect",
+          containerId,
+        ],
+        cwd: process.cwd(),
+      });
+
+
+    if (result.exitCode !== 0) {
+      throw new Error(
+        result.stderr ||
+        `Failed to inspect ${containerId}`
+      );
+    }
+
+
+    const container =
+      JSON.parse(result.stdout)[0];
+
+
+    return {
+      id: container.Id,
+      name: container.Name.replace("/", ""),
+      image: container.Config.Image,
+      status: container.State.Status,
+      running: container.State.Running,
     };
   }
 }
