@@ -56,6 +56,25 @@ export class DockerDeploymentProvider implements DeploymentProvider {
   async push(deploymentId: string, image: string, tag: string): Promise<void> {
     const registry = process.env.DOCKER_REGISTRY ?? "docker.io";
     const fullImage = `${registry}/${image}:${tag}`;
+    const username = process.env.DOCKER_USER;
+    const password = process.env.DOCKER_PASSWORD;
+
+    if (!username || !password) {
+      throw new Error("Docker credentials (DOCKER_USER/DOCKER_PASSWORD) are missing");
+    }
+
+    await deploymentLogService.append(deploymentId, `Authenticating with registry: ${registry}`);
+
+    // Step 2 — Login before push
+    const loginResult = await commandRunner.run({
+      command: "sh",
+      args: ["-c", `echo ${password} | docker login ${registry} -u ${username} --password-stdin`],
+      cwd: process.cwd(),
+    });
+
+    if (loginResult.exitCode !== 0) {
+      throw new Error(`Docker login failed: ${loginResult.stderr}`);
+    }
 
     await deploymentLogService.append(deploymentId, `Pushing ${fullImage}`);
 
@@ -95,20 +114,31 @@ export class DockerDeploymentProvider implements DeploymentProvider {
       "NODE_ENV",
     ];
 
-    // Build environment flag array
     const envArgs = envVars
       .filter((key) => process.env[key])
       .flatMap((key) => ["-e", `${key}=${process.env[key]}`]);
 
-    // Use consistent docker run arguments
     const dockerArgs = [
-      "run", "-d",
-      "--name", containerName,
-      "-p", `${hostPort}:3000`,
-      "-e", "HOSTNAME=0.0.0.0",
-      ...envArgs,
-      fullImage
-    ];
+  "run",
+  "-d",
+
+  // Put deployment container on the same network as the worker
+  "--network",
+  "marketsphere_default",
+
+  "--name",
+  containerName,
+
+  "-p",
+  `${hostPort}:3000`,
+
+  "-e",
+  "HOSTNAME=0.0.0.0",
+
+  ...envArgs,
+
+  fullImage,
+];
 
     await deploymentLogService.append(deploymentId, `Deploying with args: ${dockerArgs.join(' ')}`);
 
@@ -123,7 +153,13 @@ export class DockerDeploymentProvider implements DeploymentProvider {
     if (result.exitCode !== 0) throw new Error(`Deploy failed: ${result.stderr}`);
 
     const containerId = result.stdout.trim();
-    return { containerId, hostPort, containerUrl: `http://localhost:${hostPort}` };
+    return {
+    containerId,
+    hostPort,
+
+    // Used by the worker for health checks
+    containerUrl: `http://${containerName}:3000`,
+};
   }
 
   async stop(containerId: string): Promise<void> {

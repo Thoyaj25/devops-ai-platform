@@ -176,9 +176,14 @@ export const deploymentExecutor = {
           for (let attempt = 1; attempt <= 30; attempt++) {
             try {
               await deploymentLogService.append(
-                deploymentId,
-                `Health check ${attempt}/30`
-              );
+  deploymentId,
+  `Health check ${attempt}/30 -> ${runtime.containerUrl}`
+);
+
+console.log({
+  deploymentId,
+  verifyUrl: runtime.containerUrl,
+});
 
               const response = await fetch(
                 runtime.containerUrl,

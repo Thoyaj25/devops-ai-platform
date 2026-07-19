@@ -1,27 +1,55 @@
 import { deploymentRepository } from "@/repositories/deploymentRepository";
 
+const deploymentQueues = new Map<string, Promise<void>>();
+
 export const deploymentLogService = {
   /**
-   * Appends a new log entry to the deployment.
+   * Append a log entry sequentially for a deployment.
+   * This prevents concurrent read-modify-write operations
+   * against the Deployment.logs column.
    */
-  async append(deploymentId: string, message: string) {
-    // 1. Fetch existing logs using the repository
-    const deployment = await deploymentRepository.findLogs(deploymentId);
-    const existing = deployment?.logs ?? "";
+  async append(deploymentId: string, message: string): Promise<void> {
+    const previous =
+      deploymentQueues.get(deploymentId) ?? Promise.resolve();
 
-    // 2. Format the new log entry
-    const timestamp = new Date().toISOString();
-    const nextLog = existing + `[${timestamp}] ${message}\n`;
+    const current = previous.then(async () => {
+      const deployment =
+        await deploymentRepository.findLogs(deploymentId);
 
-    // 3. Update logs using the repository
-    await deploymentRepository.updateLogs(deploymentId, nextLog);
+      const timestamp = new Date().toISOString();
+
+      const updatedLogs =
+        (deployment?.logs ?? "") +
+        `[${timestamp}] ${message.trimEnd()}\n`;
+
+      await deploymentRepository.updateLogs(
+        deploymentId,
+        updatedLogs
+      );
+    });
+
+    // Keep the queue alive even if one write fails,
+    // but still propagate the error to the caller.
+    const queued = current.catch(() => {});
+
+    deploymentQueues.set(deploymentId, queued);
+
+    try {
+      await current;
+    } finally {
+      if (deploymentQueues.get(deploymentId) === queued) {
+        deploymentQueues.delete(deploymentId);
+      }
+    }
   },
 
   /**
-   * Retrieves the log content for a deployment.
+   * Retrieve deployment logs.
    */
-  async getLogs(deploymentId: string) {
-    const deployment = await deploymentRepository.findLogs(deploymentId);
+  async getLogs(deploymentId: string): Promise<string> {
+    const deployment =
+      await deploymentRepository.findLogs(deploymentId);
+
     return deployment?.logs ?? "";
   },
 };
