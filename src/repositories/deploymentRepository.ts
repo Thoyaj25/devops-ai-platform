@@ -71,7 +71,10 @@ export const deploymentRepository = {
   findLogs(id: string) {
     return prisma.deployment.findUnique({
       where: { id },
-      select: { logs: true, status: true },
+      select: {
+        logs: true,
+        status: true,
+      },
     });
   },
 
@@ -111,6 +114,60 @@ export const deploymentRepository = {
     });
   },
 
+  /**
+   * Returns the previous successful deployment for the same project
+   * that still owns a running container.
+   */
+  findPreviousSuccessfulDeployment(
+    projectId: string,
+    currentDeploymentId: string
+  ) {
+    return prisma.deployment.findFirst({
+      where: {
+        projectId,
+        status: "SUCCESS",
+        id: {
+          not: currentDeploymentId,
+        },
+        containerId: {
+          not: null,
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        containerId: true,
+      },
+    });
+  },
+
+  findPreviousSuccessfulDeployments(
+    projectId: string,
+    currentDeploymentId: string
+  ) {
+    return prisma.deployment.findMany({
+      where: {
+        projectId,
+        status: "SUCCESS",
+        id: {
+          not: currentDeploymentId,
+        },
+        containerId: {
+          not: null,
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        containerId: true,
+      },
+    });
+  },
+
   exists(id: string) {
     return prisma.deployment.findUnique({
       where: {
@@ -127,12 +184,16 @@ export const deploymentRepository = {
   // -------------------------
 
   /**
-   * Appends logs to a deployment.
+   * Updates the legacy logs column.
    */
   async updateLogs(id: string, logs: string) {
     return prisma.deployment.update({
-      where: { id },
-      data: { logs },
+      where: {
+        id,
+      },
+      data: {
+        logs,
+      },
     });
   },
 

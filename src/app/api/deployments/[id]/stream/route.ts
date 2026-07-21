@@ -13,8 +13,8 @@ import { projectService } from "@/services/project/projectService";
  */
 
 /**
- * Step 2 — Standardize GET /api/deployments/:id/logs
- * Implements authentication and project-level authorization check.
+ * Step 2 — Fix stream route
+ * Step 3 — Check response format
  */
 export async function GET(
   request: NextRequest,
@@ -50,7 +50,12 @@ export async function GET(
 
     const stream = new ReadableStream({
       async start(controller) {
-        let previousLogs = "";
+        type DeploymentLogEntry = Awaited<
+          ReturnType<typeof deploymentLogService.getLogs>
+        >[number];
+
+        let previousLogs: DeploymentLogEntry[] = [];
+        let previousLogSignature: string | null = null;
         let closed = false;
 
         const closeStream = () => {
@@ -77,8 +82,11 @@ export async function GET(
               return;
             }
 
-            if (logs !== previousLogs) {
-              previousLogs = logs ?? "";
+            const logSignature = JSON.stringify(logs);
+
+            if (logSignature !== previousLogSignature) {
+              previousLogs = logs ?? [];
+              previousLogSignature = logSignature;
 
               controller.enqueue(
                 encoder.encode(

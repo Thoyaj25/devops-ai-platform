@@ -2,6 +2,7 @@ export type DeployResult = {
   containerId: string;
   hostPort: number;
   containerUrl: string;
+  containerName: string;
 };
 
 export type ContainerInfo = {

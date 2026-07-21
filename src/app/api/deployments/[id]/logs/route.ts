@@ -50,7 +50,12 @@ export async function GET(
 
     const stream = new ReadableStream({
       async start(controller) {
-        let previousLogs = "";
+        type DeploymentLogEntry = Awaited<
+          ReturnType<typeof deploymentLogService.getLogs>
+        >[number];
+
+        let previousLogs: DeploymentLogEntry[] = [];
+        let previousLogSignature: string | null = null;
         let closed = false;
 
         const closeStream = () => {
@@ -67,7 +72,7 @@ export async function GET(
           }
 
           try {
-            // Fetch updated deployment status and logs
+            // Fetch updated deployment status and logs via deploymentLogService
             const currentDeployment = await deploymentRepository.findById(id);
             const logs = await deploymentLogService.getLogs(id);
 
@@ -77,8 +82,11 @@ export async function GET(
               return;
             }
 
-            if (logs !== previousLogs) {
-              previousLogs = logs ?? "";
+            const logSignature = JSON.stringify(logs);
+
+            if (logSignature !== previousLogSignature) {
+              previousLogs = logs ?? [];
+              previousLogSignature = logSignature;
 
               controller.enqueue(
                 encoder.encode(
