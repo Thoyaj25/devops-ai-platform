@@ -1,3 +1,4 @@
+import { config } from "@/lib/config";
 import { DeploymentStatus } from "@/generated/prisma";
 import { deploymentRepository } from "@/repositories/deploymentRepository";
 import { DockerDeploymentProvider } from "@/services/providers";
@@ -6,8 +7,6 @@ import { stageRunner } from "./stageRunner";
 import { DeploymentStage } from "./stages";
 import { deploymentLogService } from "./logs/deploymentLogService";
 import { withTimeout } from "@/lib/utils/timeout";
-import { generateNginxConfig } from "../proxy/nginx/nginxConfigGenerator";
-import { reloadNginx } from "../proxy/nginx/nginxReloader";
 import { proxyService } from "@/services/proxy/proxyService";
 
 const sleep = (ms: number) =>
@@ -170,24 +169,6 @@ export const deploymentExecutor = {
             throw dbError;
           }
 
-          await deploymentLogService.append(
-            deploymentId,
-            `Generating Nginx configuration for container: ${result.containerName}`
-          );
-
-          await generateNginxConfig(
-            deploymentId,
-            result.containerName,
-            `${deploymentId}.marketsphere.local`
-          );
-
-          await reloadNginx();
-
-          await deploymentLogService.append(
-            deploymentId,
-            "Nginx configuration updated successfully"
-          );
-
           return result;
         }
       );
@@ -221,6 +202,17 @@ export const deploymentExecutor = {
               });
 
               if (response.ok) {
+                // Expose through Nginx ONLY after successful health verification
+                await proxyService.exposeDeployment(
+                  deploymentId,
+                  runtime.containerName,
+                  runtime.hostPort
+                );
+                await deploymentLogService.append(
+                  deploymentId,
+                  `Deployment exposed at ${deploymentId}.${config.deploymentDomain}`
+                );
+
                 await deploymentRepository.update(deploymentId, {
                   isHealthy: true,
                   status: DeploymentStatus.SUCCESS,
@@ -239,6 +231,11 @@ export const deploymentExecutor = {
                     );
 
                     await provider.remove(previousDeployment.containerId);
+
+                    // Remove previous deployment's proxy/config
+                    if (previousDeployment.id) {
+                      await proxyService.removeDeployment(previousDeployment.id);
+                    }
 
                     await deploymentLogService.append(
                       deploymentId,
@@ -305,6 +302,13 @@ export const deploymentExecutor = {
           );
 
           await provider.remove(deployedContainerId);
+
+          // Remove proxy configuration if deployment fails
+          try {
+            await proxyService.removeDeployment(deploymentId);
+          } catch {
+            // Ignore proxy cleanup errors
+          }
 
           await deploymentLogService.append(
             deploymentId,

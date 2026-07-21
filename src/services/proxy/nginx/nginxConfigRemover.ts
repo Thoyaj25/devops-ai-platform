@@ -14,15 +14,13 @@ export async function removeNginxConfig(
     `${deploymentId}.conf`
   );
 
+  console.log("[NGINX] Attempting to remove:", configFile);
+
   try {
     await fs.unlink(configFile);
+    console.log("[NGINX] Removed:", configFile);
   } catch (error) {
-    if (
-      !(error instanceof Error) ||
-      !("code" in error) ||
-      (error as NodeJS.ErrnoException).code !== "ENOENT"
-    ) {
-      throw error;
-    }
+    console.error("[NGINX] Failed removing:", configFile, error);
+    throw error;
   }
 }

@@ -9,6 +9,11 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
+console.log(
+  "DASHBOARD_SESSION_CHECK:",
+  JSON.stringify(session, null, 2)
+);
+
     if (!session?.user?.id) {
       return NextResponse.json(
         {

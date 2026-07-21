@@ -20,6 +20,8 @@ export interface CommandResult {
 export const commandRunner = {
   async run(options: CommandOptions): Promise<CommandResult> {
     return new Promise((resolve, reject) => {
+      console.log("Running:", options.command, options.args);
+
       const child = spawn(
         options.command,
         options.args ?? [],
@@ -78,9 +80,14 @@ export const commandRunner = {
           clearTimeout(timeout);
         }
 
+        console.log("Process exited:", code);
+
         // Wait for all outstanding async callbacks to complete
         try {
+          console.log("Waiting for log callbacks...");
           await Promise.all(pendingCallbacks);
+          console.log("All log callbacks completed");
+
           resolve({
             exitCode: code ?? -1,
             stdout,

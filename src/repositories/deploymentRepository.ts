@@ -118,11 +118,11 @@ export const deploymentRepository = {
    * Returns the previous successful deployment for the same project
    * that still owns a running container.
    */
-  findPreviousSuccessfulDeployment(
+  async findPreviousSuccessfulDeployment(
     projectId: string,
     currentDeploymentId: string
   ) {
-    return prisma.deployment.findFirst({
+    const deployment = await prisma.deployment.findFirst({
       where: {
         projectId,
         status: "SUCCESS",
@@ -141,6 +141,9 @@ export const deploymentRepository = {
         containerId: true,
       },
     });
+
+    console.log("Cleanup candidate:", deployment);
+    return deployment;
   },
 
   findPreviousSuccessfulDeployments(
