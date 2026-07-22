@@ -3,86 +3,84 @@ import { DockerDeploymentProvider } from "@/services/providers";
 
 const provider = new DockerDeploymentProvider();
 
-export const deploymentControlService = {
+type DeploymentWithContainer = {
+  id: string;
+  containerId: string;
+};
 
-  async stop(deploymentId: string) {
+async function getDeploymentContainer(
+  deploymentId: string
+): Promise<DeploymentWithContainer> {
+  const deployment = await deploymentRepository.findById(deploymentId);
 
-    const deployment =
-      await deploymentRepository.findById(deploymentId);
-
-    if (!deployment?.containerId) {
-      throw new Error(
-        "Deployment container not found"
-      );
-    }
-
-    await provider.stop(
-      deployment.containerId
+  if (!deployment) {
+    throw new Error(
+      `Deployment '${deploymentId}' not found`
     );
+  }
 
-    return {
-      message: "Container stopped",
-    };
-  },
+  if (!deployment.containerId) {
+    throw new Error(
+      `Deployment '${deploymentId}' has no running container`
+    );
+  }
 
+  return {
+    id: deployment.id,
+    containerId: deployment.containerId,
+  };
+}
 
+export const deploymentControlService = {
   async start(deploymentId: string) {
-
     const deployment =
-      await deploymentRepository.findById(deploymentId);
-
-    if (!deployment?.containerId) {
-      throw new Error(
-        "Deployment container not found"
-      );
-    }
+      await getDeploymentContainer(deploymentId);
 
     await provider.start(
       deployment.containerId
     );
 
     return {
-      message: "Container started",
+      message: "Container started successfully",
+      containerId: deployment.containerId,
     };
   },
 
+  async stop(deploymentId: string) {
+    const deployment =
+      await getDeploymentContainer(deploymentId);
+
+    await provider.stop(
+      deployment.containerId
+    );
+
+    return {
+      message: "Container stopped successfully",
+      containerId: deployment.containerId,
+    };
+  },
 
   async restart(deploymentId: string) {
-
     const deployment =
-      await deploymentRepository.findById(deploymentId);
-
-    if (!deployment?.containerId) {
-      throw new Error(
-        "Deployment container not found"
-      );
-    }
+      await getDeploymentContainer(deploymentId);
 
     await provider.restart(
       deployment.containerId
     );
 
     return {
-      message: "Container restarted",
+      message: "Container restarted successfully",
+      containerId: deployment.containerId,
     };
   },
 
-
   async remove(deploymentId: string) {
-
     const deployment =
-      await deploymentRepository.findById(deploymentId);
-
-    if (!deployment?.containerId) {
-      throw new Error(
-        "Deployment container not found"
-      );
-    }
+      await getDeploymentContainer(deploymentId);
 
     await provider.remove(
       deployment.containerId
     );
-
 
     await deploymentRepository.update(
       deploymentId,
@@ -94,25 +92,15 @@ export const deploymentControlService = {
       }
     );
 
-
     return {
-      message: "Container removed",
+      message: "Container removed successfully",
+      deploymentId,
     };
   },
 
-
   async inspect(deploymentId: string) {
-
     const deployment =
-      await deploymentRepository.findById(deploymentId);
-
-
-    if (!deployment?.containerId) {
-      throw new Error(
-        "Deployment container not found"
-      );
-    }
-
+      await getDeploymentContainer(deploymentId);
 
     return provider.inspect(
       deployment.containerId

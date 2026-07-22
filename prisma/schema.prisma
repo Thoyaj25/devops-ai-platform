@@ -156,10 +156,11 @@ enum ProjectStatus {
 }
 
 enum DeploymentStatus {
+  PENDING
+  RUNNING
   SUCCESS
   FAILED
-  RUNNING
-  ROLLBACK
+  SUPERSEDED
 }
 
 enum EnvironmentType {

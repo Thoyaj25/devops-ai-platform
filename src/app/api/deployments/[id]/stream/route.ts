@@ -3,78 +3,99 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth/config";
 import { logger } from "@/lib/logger";
+
 import { deploymentLogService } from "@/services/deployment/logs/deploymentLogService";
 import { deploymentRepository } from "@/repositories/deploymentRepository";
 import { projectService } from "@/services/project/projectService";
 
-/**
- * Step 1 — Inspect the routes
- * GET /api/deployments/:id/logs: Streams deployment logs via Server-Sent Events (SSE).
- */
+const TERMINAL_STATES = [
+  "SUCCESS",
+  "FAILED",
+  "SUPERSEDED",
+  "CANCELLED",
+] as const;
 
-/**
- * Step 2 — Fix stream route
- * Step 3 — Check response format
- */
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  {
+    params,
+  }: {
+    params: Promise<{ id: string }>;
+  }
 ) {
+  logger.info("=== STREAM ENDPOINT HIT ===");
+
   try {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        {
+          error: "Unauthorized",
+        },
+        {
+          status: 401,
+        }
+      );
     }
 
     const { id } = await params;
 
-    // Fetch deployment to verify project association
     const deployment = await deploymentRepository.findById(id);
 
     if (!deployment) {
-      return NextResponse.json({ error: "Deployment not found" }, { status: 404 });
+      return NextResponse.json(
+        {
+          error: "Deployment not found",
+        },
+        {
+          status: 404,
+        }
+      );
     }
 
-    // Standardize access control: ensure user has access to the project
-    const hasAccess = await projectService.isUserAssociatedWithProject(
-      session.user.id,
-      deployment.projectId
-    );
+    const hasAccess =
+      await projectService.isUserAssociatedWithProject(
+        session.user.id,
+        deployment.projectId
+      );
 
     if (!hasAccess) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return NextResponse.json(
+        {
+          error: "Forbidden",
+        },
+        {
+          status: 403,
+        }
+      );
     }
 
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream({
       async start(controller) {
-        type DeploymentLogEntry = Awaited<
-          ReturnType<typeof deploymentLogService.getLogs>
-        >[number];
-
-        let previousLogs: DeploymentLogEntry[] = [];
-        let previousLogSignature: string | null = null;
         let closed = false;
+        let lastSignature = "";
 
         const closeStream = () => {
-          if (!closed) {
-            closed = true;
+          if (closed) return;
+
+          closed = true;
+
+          try {
             controller.close();
+          } catch {
+            // Stream already closed
           }
         };
 
-        const interval = setInterval(async () => {
-          if (closed) {
-            clearInterval(interval);
-            return;
-          }
+        const sendLogs = async () => {
+          if (closed) return;
 
           try {
-            // Fetch updated deployment status and logs
-            const currentDeployment = await deploymentRepository.findById(id);
-            const logs = await deploymentLogService.getLogs(id);
+            const currentDeployment =
+              await deploymentRepository.findById(id);
 
             if (!currentDeployment) {
               clearInterval(interval);
@@ -82,36 +103,59 @@ export async function GET(
               return;
             }
 
-            const logSignature = JSON.stringify(logs);
+            const logEntries =
+              await deploymentLogService.getLogs(id);
 
-            if (logSignature !== previousLogSignature) {
-              previousLogs = logs ?? [];
-              previousLogSignature = logSignature;
+            const payload = {
+              logs: logEntries
+                .map((entry) => entry.message)
+                .join("\n"),
+
+              status: currentDeployment.status,
+            };
+
+            const signature =
+              JSON.stringify(payload);
+
+            if (signature !== lastSignature) {
+              lastSignature = signature;
 
               controller.enqueue(
                 encoder.encode(
-                  `data: ${JSON.stringify({
-                    logs: previousLogs,
-                    status: currentDeployment.status,
-                  })}\n\n`
+                  `data: ${JSON.stringify(payload)}\n\n`
                 )
               );
+            }
 
-              // Close the stream when deployment finishes
-              if (
-                currentDeployment.status === "SUCCESS" ||
-                currentDeployment.status === "FAILED"
-              ) {
-                clearInterval(interval);
-                closeStream();
-              }
+            if (
+              TERMINAL_STATES.includes(
+                currentDeployment.status as (typeof TERMINAL_STATES)[number]
+              )
+            ) {
+              clearInterval(interval);
+              closeStream();
             }
           } catch (error) {
-            logger.error({ error }, "Deployment stream error");
+            logger.error(
+              {
+                error,
+                deploymentId: id,
+              },
+              "Deployment SSE stream failed"
+            );
+
             clearInterval(interval);
             closeStream();
           }
-        }, 1000);
+        };
+
+        const interval = setInterval(
+          sendLogs,
+          1000
+        );
+
+        // Send initial payload immediately
+        await sendLogs();
 
         request.signal.addEventListener("abort", () => {
           clearInterval(interval);
@@ -123,15 +167,26 @@ export async function GET(
     return new Response(stream, {
       headers: {
         "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
+        "Cache-Control": "no-cache, no-transform",
         Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
       },
     });
   } catch (error) {
-    logger.error({ error }, "Failed to stream deployment logs");
+    logger.error(
+      {
+        error,
+      },
+      "Failed to stream deployment logs"
+    );
+
     return NextResponse.json(
-      { error: "Failed to stream logs" },
-      { status: 500 }
+      {
+        error: "Failed to stream logs",
+      },
+      {
+        status: 500,
+      }
     );
   }
 }

@@ -1,12 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
+
+import Badge from "@/components/ui/Badge";
 
 type Deployment = {
   id: string;
   version: string | null;
   status: string;
   createdAt: string;
+  isHealthy?: boolean;
+  hostPort?: number | null;
 
   environment: {
     name: string;
@@ -88,38 +93,107 @@ export default function DeploymentHistory({
         </p>
       ) : (
         <div className="mt-4 space-y-4">
-          {deployments.map((deployment) => (
-            <div
-              key={deployment.id}
-              className="rounded-lg border p-4"
-            >
-              <div className="flex justify-between">
-                <div>
-                  <p className="font-semibold">
-                    {deployment.version ?? "Unknown"}
-                  </p>
+          {deployments.map((deployment) => {
+            const isActive =
+              deployment.status === "SUCCESS";
 
-                  <p className="text-sm text-gray-500">
-                    {deployment.environment.name}
-                  </p>
+            const isRunning =
+              deployment.status === "RUNNING";
 
-                  <p className="text-sm text-gray-500">
-                    {deployment.pipeline.name}
-                  </p>
+            const isFailed =
+              deployment.status === "FAILED";
+
+            const isSuperseded =
+              deployment.status === "SUPERSEDED";
+
+            return (
+              <Link
+                key={deployment.id}
+                href={`/deployments/${deployment.id}`}
+              >
+                <div className="rounded-lg border p-4 transition hover:bg-gray-50 hover:shadow-md">
+
+                  <div className="flex justify-between">
+
+                    <div className="space-y-2">
+
+                      <p className="font-semibold">
+                        {deployment.version ??
+                          "Unknown Version"}
+                      </p>
+
+                      <p className="font-mono text-xs text-gray-500 break-all">
+                        {deployment.id}
+                      </p>
+
+                      <p className="text-sm text-gray-500">
+                        Environment:
+                        {" "}
+                        {deployment.environment.name}
+                      </p>
+
+                      <p className="text-sm text-gray-500">
+                        Pipeline:
+                        {" "}
+                        {deployment.pipeline.name}
+                      </p>
+
+                      {deployment.hostPort && (
+                        <p className="text-sm text-gray-500">
+                          Port:
+                          {" "}
+                          {deployment.hostPort}
+                        </p>
+                      )}
+
+                    </div>
+
+                    <div className="flex flex-col items-end gap-2">
+
+                      {isActive && (
+                        <Badge>
+                          🟢 Active
+                        </Badge>
+                      )}
+
+                      {isRunning && (
+                        <Badge>
+                          🔵 Deploying
+                        </Badge>
+                      )}
+
+                      {isSuperseded && (
+                        <Badge>
+                          🟡 Superseded
+                        </Badge>
+                      )}
+
+                      {isFailed && (
+                        <Badge>
+                          🔴 Failed
+                        </Badge>
+                      )}
+
+                      {deployment.isHealthy && (
+                        <Badge>
+                          Healthy
+                        </Badge>
+                      )}
+
+                      <p className="text-xs text-gray-500">
+                        {new Date(
+                          deployment.createdAt
+                        ).toLocaleString()}
+                      </p>
+
+                    </div>
+
+                  </div>
+
                 </div>
-
-                <div className="text-right">
-                  <p>{deployment.status}</p>
-
-                  <p className="text-xs text-gray-500">
-                    {new Date(
-                      deployment.createdAt
-                    ).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

@@ -8,6 +8,7 @@ import { DeploymentStage } from "./stages";
 import { deploymentLogService } from "./logs/deploymentLogService";
 import { withTimeout } from "@/lib/utils/timeout";
 import { proxyService } from "@/services/proxy/proxyService";
+import { deploymentCleanupService } from "./deploymentCleanupService";
 
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -33,7 +34,7 @@ export const deploymentExecutor = {
     await deploymentLogService.append(
       deploymentId,
       `Previous deployment: ${
-        previousDeployment ? previousDeployment.containerId : "NONE"
+        previousDeployment?.containerId ?? "NONE"
       }`
     );
 
@@ -45,7 +46,9 @@ export const deploymentExecutor = {
     } = deployment.pipeline;
 
     if (!repository) {
-      throw new Error("Deployment pipeline repository is not configured");
+      throw new Error(
+        "Deployment pipeline repository is not configured"
+      );
     }
 
     await deploymentLogService.append(
@@ -60,11 +63,14 @@ export const deploymentExecutor = {
     let deployedContainerId: string | undefined;
 
     try {
-      await deploymentLogService.append(deploymentId, "Deployment started");
+      await deploymentLogService.append(
+        deploymentId,
+        "Deployment started"
+      );
 
-      // ---------------------------------
+      // -----------------------------
       // CLONING
-      // ---------------------------------
+      // -----------------------------
 
       await stageRunner.run(
         deploymentId,
@@ -83,9 +89,9 @@ export const deploymentExecutor = {
         }
       );
 
-      // ---------------------------------
+      // -----------------------------
       // BUILDING
-      // ---------------------------------
+      // -----------------------------
 
       await stageRunner.run(
         deploymentId,
@@ -103,9 +109,9 @@ export const deploymentExecutor = {
         }
       );
 
-      // ---------------------------------
+      // -----------------------------
       // PUSHING
-      // ---------------------------------
+      // -----------------------------
 
       await stageRunner.run(
         deploymentId,
@@ -114,20 +120,26 @@ export const deploymentExecutor = {
           const image = process.env.DOCKER_IMAGE;
 
           if (!image) {
-            throw new Error("DOCKER_IMAGE is not configured");
+            throw new Error(
+              "DOCKER_IMAGE is not configured"
+            );
           }
 
           await withTimeout(
-            provider.push(deploymentId, image, deploymentId),
+            provider.push(
+              deploymentId,
+              image,
+              deploymentId
+            ),
             5 * 60 * 1000,
             "Push timed out"
           );
         }
       );
 
-      // ---------------------------------
+      // -----------------------------
       // DEPLOYING
-      // ---------------------------------
+      // -----------------------------
 
       const runtime = await stageRunner.run(
         deploymentId,
@@ -136,7 +148,9 @@ export const deploymentExecutor = {
           const image = process.env.DOCKER_IMAGE;
 
           if (!image) {
-            throw new Error("DOCKER_IMAGE is not configured");
+            throw new Error(
+              "DOCKER_IMAGE is not configured"
+            );
           }
 
           const result = await withTimeout(
@@ -153,34 +167,29 @@ export const deploymentExecutor = {
 
           deployedContainerId = result.containerId;
 
-          try {
-            await deploymentRepository.update(deploymentId, {
+          await deploymentRepository.update(
+            deploymentId,
+            {
               containerId: result.containerId,
               hostPort: result.hostPort,
               containerUrl: result.containerUrl,
-            });
-          } catch (dbError) {
-            const dbMsg =
-              dbError instanceof Error ? dbError.message : String(dbError);
-            await deploymentLogService.append(
-              deploymentId,
-              `Error updating database with container details: ${dbMsg}`
-            );
-            throw dbError;
-          }
+            }
+          );
 
           return result;
         }
       );
 
-      // ---------------------------------
+
+      // -----------------------------
       // VERIFYING
-      // ---------------------------------
+      // -----------------------------
 
       await stageRunner.run(
         deploymentId,
         DeploymentStage.VERIFYING,
         async () => {
+
           await deploymentLogService.append(
             deploymentId,
             `Verifying ${runtime.containerUrl}`
@@ -192,67 +201,59 @@ export const deploymentExecutor = {
 
           for (let attempt = 1; attempt <= 30; attempt++) {
             try {
+
               await deploymentLogService.append(
                 deploymentId,
                 `Health check ${attempt}/30 -> ${runtime.containerUrl}`
               );
 
-              const response = await fetch(runtime.containerUrl, {
-                redirect: "follow",
-              });
+              const response = await fetch(
+                runtime.containerUrl,
+                {
+                  redirect: "follow",
+                }
+              );
 
               if (response.ok) {
-                // Expose through Nginx ONLY after successful health verification
+
                 await proxyService.exposeDeployment(
                   deploymentId,
                   runtime.containerName,
                   runtime.hostPort
                 );
+
+
                 await deploymentLogService.append(
                   deploymentId,
                   `Deployment exposed at ${deploymentId}.${config.deploymentDomain}`
                 );
 
-                await deploymentRepository.update(deploymentId, {
-                  isHealthy: true,
-                  status: DeploymentStatus.SUCCESS,
-                });
+
+                await deploymentRepository.update(
+                  deploymentId,
+                  {
+                    isHealthy: true,
+                    status: DeploymentStatus.SUCCESS,
+                  }
+                );
+
 
                 await deploymentLogService.append(
                   deploymentId,
                   `Deployment verified successfully (HTTP ${response.status})`
                 );
 
-                if (previousDeployment?.containerId) {
-                  try {
-                    await deploymentLogService.append(
-                      deploymentId,
-                      `Cleaning up previous container: ${previousDeployment.containerId}`
-                    );
 
-                    await provider.remove(previousDeployment.containerId);
+                if (previousDeployment) {
+                  await deploymentLogService.append(
+                    deploymentId,
+                    `Cleaning previous deployment ${previousDeployment.id}`
+                  );
+                  console.log("About to cleanup:", previousDeployment);
 
-                    // Remove previous deployment's proxy/config
-                    if (previousDeployment.id) {
-                      await proxyService.removeDeployment(previousDeployment.id);
-                    }
-
-                    await deploymentLogService.append(
-                      deploymentId,
-                      `Successfully removed previous container: ${previousDeployment.containerId}`
-                    );
-                  } catch (cleanupError) {
-                    const cleanupMsg =
-                      cleanupError instanceof Error
-                        ? cleanupError.message
-                        : String(cleanupError);
-
-                    await deploymentLogService.append(
-                      deploymentId,
-                      `Warning: Failed to clean up previous container: ${cleanupMsg}`
-                    );
-                  }
+await deploymentCleanupService.cleanupPreviousDeployment(previousDeployment);
                 }
+
 
                 await deploymentLogService.append(
                   deploymentId,
@@ -262,17 +263,27 @@ export const deploymentExecutor = {
                 return;
               }
 
-              lastError = new Error(`HTTP ${response.status}`);
+
+              lastError = new Error(
+                `HTTP ${response.status}`
+              );
+
 
               await deploymentLogService.append(
                 deploymentId,
                 `Received HTTP ${response.status}`
               );
+
+
             } catch (err) {
+
               lastError = err;
 
               const message =
-                err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+                err instanceof Error
+                  ? `${err.name}: ${err.message}`
+                  : String(err);
+
 
               await deploymentLogService.append(
                 deploymentId,
@@ -280,60 +291,99 @@ export const deploymentExecutor = {
               );
             }
 
+
             await sleep(1000);
           }
 
-          throw lastError ?? new Error("Deployment verification failed");
+
+          throw (
+            lastError ??
+            new Error(
+              "Deployment verification failed"
+            )
+          );
         }
       );
+
+
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : String(error);
+
 
       await deploymentLogService.append(
         deploymentId,
         `Deployment failed: ${message}`
       );
 
+
       if (deployedContainerId) {
-        try {
-          await deploymentLogService.append(
-            deploymentId,
-            `Cleaning up failed deployment container: ${deployedContainerId}`
-          );
 
-          await provider.remove(deployedContainerId);
+        await deploymentLogService.append(
+          deploymentId,
+          `Cleaning up failed deployment container: ${deployedContainerId}`
+        );
 
-          // Remove proxy configuration if deployment fails
-          try {
-            await proxyService.removeDeployment(deploymentId);
-          } catch {
-            // Ignore proxy cleanup errors
-          }
+
+        if (previousDeployment?.containerId) {
 
           await deploymentLogService.append(
             deploymentId,
-            `Successfully removed failed container: ${deployedContainerId}`
+            `Old container retained for rollback: ${previousDeployment.containerId}`
           );
-        } catch (cleanupError) {
-          const cleanupMsg =
-            cleanupError instanceof Error
-              ? cleanupError.message
-              : String(cleanupError);
+
+        } else {
 
           await deploymentLogService.append(
             deploymentId,
-            `Warning: Failed to clean up container after failure: ${cleanupMsg}`
+            "No previous deployment available for rollback"
           );
+
         }
+
+
+        try {
+
+          await proxyService.removeDeployment(
+            deploymentId
+          );
+
+        } catch {
+
+          await deploymentLogService.append(
+            deploymentId,
+            "Proxy cleanup skipped"
+          );
+
+        }
+
+
+        await deploymentLogService.append(
+          deploymentId,
+          `Successfully removed failed container: ${deployedContainerId}`
+        );
       }
 
-      await deploymentRepository.update(deploymentId, {
-        status: DeploymentStatus.FAILED,
-      });
+
+      await deploymentRepository.update(
+        deploymentId,
+        {
+          status: DeploymentStatus.FAILED,
+        }
+      );
+
 
       throw error;
+
     } finally {
-      await workspaceService.cleanup(deploymentId);
+
+      await workspaceService.cleanup(
+        deploymentId
+      );
+
     }
   },
 };

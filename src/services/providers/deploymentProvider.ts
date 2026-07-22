@@ -1,17 +1,17 @@
-export type DeployResult = {
+export interface DeployResult {
   containerId: string;
+  containerName: string;
   hostPort: number;
   containerUrl: string;
-  containerName: string;
-};
+}
 
-export type ContainerInfo = {
+export interface ContainerInfo {
   id: string;
   name: string;
   image: string;
   status: string;
   running: boolean;
-};
+}
 
 export interface DeploymentProvider {
   /**
@@ -79,6 +79,13 @@ export interface DeploymentProvider {
    */
   remove(
     containerId: string
+  ): Promise<void>;
+
+  /**
+   * Remove a container by name/ID safely.
+   */
+  removeContainer(
+    containerName: string
   ): Promise<void>;
 
   /**

@@ -6,21 +6,55 @@ const OUTPUT_DIRECTORY = path.resolve(
   "nginx/conf.d"
 );
 
+
 export async function removeNginxConfig(
   deploymentId: string
 ): Promise<void> {
+
   const configFile = path.join(
     OUTPUT_DIRECTORY,
     `${deploymentId}.conf`
   );
 
-  console.log("[NGINX] Attempting to remove:", configFile);
+
+  console.log(
+    "[NGINX] Attempting to remove:",
+    configFile
+  );
+
 
   try {
+
     await fs.unlink(configFile);
-    console.log("[NGINX] Removed:", configFile);
-  } catch (error) {
-    console.error("[NGINX] Failed removing:", configFile, error);
+
+
+    console.log(
+      "[NGINX] Removed:",
+      configFile
+    );
+
+
+  } catch (error: any) {
+
+
+    if (error.code === "ENOENT") {
+
+      console.log(
+        "[NGINX] Config already removed:",
+        configFile
+      );
+
+      return;
+    }
+
+
+    console.error(
+      "[NGINX] Failed removing:",
+      configFile,
+      error
+    );
+
+
     throw error;
   }
 }

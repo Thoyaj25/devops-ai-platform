@@ -16,42 +16,48 @@ export const deploymentJobRepository = {
   },
 
   /**
-   * Claim the oldest pending deployment job using PostgreSQL row-level locking.
-   * Ensures jobs that are scheduled for the future (nextRetryAt) are ignored.
+   * Atomically claim the oldest pending deployment job.
+   *
+   * Uses a single UPDATE ... FROM ... RETURNING statement to avoid
+   * interactive transactions and race conditions.
    */
   async claimNextJob() {
-    return prisma.$transaction(async (tx) => {
-      const now = new Date();
-      
-      const jobs = await tx.$queryRaw<Array<{ id: string }>>`
-        SELECT id FROM "DeploymentJob"
-        WHERE status = 'PENDING'::"JobStatus"
-        AND ("nextRetryAt" IS NULL OR "nextRetryAt" <= ${now})
-        ORDER BY "createdAt" ASC
+    const now = new Date();
+
+    const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+      UPDATE "DeploymentJob"
+      SET
+        status = 'RUNNING'::"JobStatus",
+        "nextRetryAt" = NULL
+      WHERE id = (
+        SELECT id
+        FROM "DeploymentJob"
+        WHERE
+          status = 'PENDING'::"JobStatus"
+          AND (
+            "nextRetryAt" IS NULL
+            OR "nextRetryAt" <= ${now}
+          )
+        ORDER BY "createdAt"
         LIMIT 1
         FOR UPDATE SKIP LOCKED
-      `;
+      )
+      RETURNING id;
+    `;
 
-      if (jobs.length === 0) {
-        return null;
-      }
+    if (rows.length === 0) {
+      return null;
+    }
 
-      const jobId = jobs[0].id;
-
-      // Step 1: Update the status to RUNNING and clear the retry schedule
-      return tx.deploymentJob.update({
-        where: { id: jobId },
-        data: { 
-          status: JobStatus.RUNNING,
-          nextRetryAt: null 
-        },
-      });
+    return prisma.deploymentJob.findUnique({
+      where: {
+        id: rows[0].id,
+      },
     });
   },
 
   /**
-   * Update deployment job, optionally setting nextRetryAt.
-   * Step 2: Explicitly handle undefined data to avoid overwriting with null/undefined.
+   * Update deployment job.
    */
   async update(
     id: string,
@@ -68,9 +74,15 @@ export const deploymentJobRepository = {
       data: {
         ...(data.status !== undefined && { status: data.status }),
         ...(data.error !== undefined && { error: data.error }),
-        ...(data.nextRetryAt !== undefined && { nextRetryAt: data.nextRetryAt }),
-        ...(data.startedAt !== undefined && { startedAt: data.startedAt }),
-        ...(data.completedAt !== undefined && { completedAt: data.completedAt }),
+        ...(data.nextRetryAt !== undefined && {
+          nextRetryAt: data.nextRetryAt,
+        }),
+        ...(data.startedAt !== undefined && {
+          startedAt: data.startedAt,
+        }),
+        ...(data.completedAt !== undefined && {
+          completedAt: data.completedAt,
+        }),
       },
     });
   },
@@ -82,7 +94,9 @@ export const deploymentJobRepository = {
     return prisma.deploymentJob.update({
       where: { id },
       data: {
-        attempts: { increment: 1 },
+        attempts: {
+          increment: 1,
+        },
       },
     });
   },
@@ -101,34 +115,49 @@ export const deploymentJobRepository = {
    */
   async findByDeploymentId(deploymentId: string) {
     return prisma.deploymentJob.findMany({
-      where: { deploymentId },
-      orderBy: { createdAt: "desc" },
+      where: {
+        deploymentId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
     });
   },
 
   /**
-   * Find all pending jobs that are currently eligible for processing.
+   * Find all pending jobs currently eligible for processing.
    */
   async findPending() {
     const now = new Date();
+
     return prisma.deploymentJob.findMany({
       where: {
         status: JobStatus.PENDING,
         OR: [
-          { nextRetryAt: null },
-          { nextRetryAt: { lte: now } }
-        ]
+          {
+            nextRetryAt: null,
+          },
+          {
+            nextRetryAt: {
+              lte: now,
+            },
+          },
+        ],
       },
-      orderBy: { createdAt: "asc" },
+      orderBy: {
+        createdAt: "asc",
+      },
     });
   },
 
   /**
-   * Reset a failed/running job back to pending.
+   * Reset a job back to pending.
    */
   async requeue(id: string) {
     return prisma.deploymentJob.update({
-      where: { id },
+      where: {
+        id,
+      },
       data: {
         status: JobStatus.PENDING,
         error: null,
@@ -138,11 +167,13 @@ export const deploymentJobRepository = {
   },
 
   /**
-   * Schedule retry with delayed execution.
+   * Schedule retry.
    */
   async scheduleRetry(id: string, retryAt: Date) {
     return prisma.deploymentJob.update({
-      where: { id },
+      where: {
+        id,
+      },
       data: {
         status: JobStatus.PENDING,
         nextRetryAt: retryAt,
@@ -151,11 +182,13 @@ export const deploymentJobRepository = {
   },
 
   /**
-   * Permanently mark a job as failed.
+   * Mark job permanently failed.
    */
   async markFailed(id: string, error?: string) {
     return prisma.deploymentJob.update({
-      where: { id },
+      where: {
+        id,
+      },
       data: {
         status: JobStatus.FAILED,
         error: error ?? null,
@@ -165,11 +198,13 @@ export const deploymentJobRepository = {
   },
 
   /**
-   * Delete a deployment job.
+   * Delete job.
    */
   async delete(id: string) {
     return prisma.deploymentJob.delete({
-      where: { id },
+      where: {
+        id,
+      },
     });
   },
 };

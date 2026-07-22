@@ -25,29 +25,47 @@ export default function DeploymentLogs({
   useEffect(() => {
     if (!deploymentId) return;
 
+    console.log("=== FRONTEND: Opening EventSource stream for deployment ===", deploymentId);
+
     const source = new EventSource(
       `/api/deployments/${deploymentId}/stream`
     );
 
+    source.onopen = () => {
+      console.log("=== FRONTEND: EventSource connection established successfully ===");
+    };
+
     source.onmessage = (event) => {
+      console.log("=== FRONTEND: Received message from stream ===", event.data);
       const data: StreamPayload = JSON.parse(event.data);
 
       setLogs(data.logs ?? "");
       setStatus(data.status);
 
-      if (
-        data.status === "SUCCESS" ||
-        data.status === "FAILED"
-      ) {
-        source.close();
-      }
+      const terminalStates = [
+  "SUCCESS",
+  "FAILED",
+  "SUPERSEDED",
+  "CANCELLED",
+];
+
+if (terminalStates.includes(data.status)) {
+  console.log(
+    "=== FRONTEND: Deployment finished with status, closing stream ===",
+    data.status
+  );
+
+  source.close();
+}
     };
 
-    source.onerror = () => {
+    source.onerror = (error) => {
+      console.error("=== FRONTEND: EventSource connection error occurred ===", error);
       source.close();
     };
 
     return () => {
+      console.log("=== FRONTEND: Cleaning up EventSource connection ===");
       source.close();
     };
   }, [deploymentId]);

@@ -13,6 +13,8 @@ type Deployment = {
   version: string | null;
   status: string;
   createdAt: string;
+  isHealthy?: boolean;
+  hostPort?: number | null;
 };
 
 type Props = {
@@ -38,7 +40,6 @@ export default function DeploymentList({
 
         const result = await response.json();
 
-        // Standardized API response handling
         if (!result.success) {
           throw new Error(
             result.error ?? "Failed to load deployments"
@@ -78,31 +79,94 @@ export default function DeploymentList({
         />
       ) : (
         <div className="mt-4 space-y-4">
-          {deployments.map((deployment) => (
-            <Link
-              key={deployment.id}
-              href={`/deployments/${deployment.id}`}
-              className="block"
-            >
-              <Card className="flex cursor-pointer items-center justify-between transition-colors hover:bg-gray-50 hover:shadow-md">
-                <div>
-                  <h3 className="font-semibold">
-                    {deployment.version ?? "Unknown Version"}
-                  </h3>
+          {deployments.map((deployment) => {
+            const isActive =
+              deployment.status === "SUCCESS";
 
-                  <p className="mt-1 text-sm text-gray-500">
-                    {new Date(
-                      deployment.createdAt
-                    ).toLocaleString()}
-                  </p>
-                </div>
+            const isRunning =
+              deployment.status === "RUNNING";
 
-                <Badge>
-                  {deployment.status}
-                </Badge>
-              </Card>
-            </Link>
-          ))}
+            const isFailed =
+              deployment.status === "FAILED";
+
+            const isSuperseded =
+              deployment.status === "SUPERSEDED";
+
+            return (
+              <Link
+                key={deployment.id}
+                href={`/deployments/${deployment.id}`}
+                className="block"
+              >
+                <Card className="cursor-pointer transition-all hover:bg-gray-50 hover:shadow-md">
+
+                  <div className="flex items-start justify-between">
+
+                    <div className="space-y-2">
+
+                      <h3 className="font-semibold">
+                        {deployment.version ??
+                          "Unknown Version"}
+                      </h3>
+
+                      <p className="font-mono text-xs text-gray-500 break-all">
+                        {deployment.id}
+                      </p>
+
+                      <p className="text-sm text-gray-500">
+                        {new Date(
+                          deployment.createdAt
+                        ).toLocaleString()}
+                      </p>
+
+                      {deployment.hostPort && (
+                        <p className="text-sm text-gray-500">
+                          Port: {deployment.hostPort}
+                        </p>
+                      )}
+
+                    </div>
+
+                    <div className="flex flex-col items-end gap-2">
+
+                      {isActive && (
+                        <Badge>
+                          🟢 Active
+                        </Badge>
+                      )}
+
+                      {isRunning && (
+                        <Badge>
+                          🔵 Deploying
+                        </Badge>
+                      )}
+
+                      {isSuperseded && (
+                        <Badge>
+                          🟡 Superseded
+                        </Badge>
+                      )}
+
+                      {isFailed && (
+                        <Badge>
+                          🔴 Failed
+                        </Badge>
+                      )}
+
+                      {deployment.isHealthy && (
+                        <Badge>
+                          Healthy
+                        </Badge>
+                      )}
+
+                    </div>
+
+                  </div>
+
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       )}
     </section>

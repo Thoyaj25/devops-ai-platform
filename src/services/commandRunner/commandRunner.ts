@@ -73,7 +73,17 @@ export const commandRunner = {
         }, options.timeoutMs);
       }
 
-      child.on("error", reject);
+      child.on("error", (error) => {
+  if (timeout) {
+    clearTimeout(timeout);
+  }
+
+  reject(
+    new Error(
+      `Failed to execute '${options.command}': ${error.message}`
+    )
+  );
+});
 
       child.on("close", async (code) => {
         if (timeout) {
