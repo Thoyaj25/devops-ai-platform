@@ -11,116 +11,72 @@ const OUTPUT_DIRECTORY = path.resolve(
   "nginx/conf.d"
 );
 
-
 async function ensureOutputDirectory(): Promise<void> {
   await fs.mkdir(OUTPUT_DIRECTORY, {
     recursive: true,
   });
 }
 
-
 function validateInput(
   deploymentId: string,
   networkAlias: string,
   domain: string
 ): void {
-
-  if (!deploymentId?.trim()) {
-    throw new Error("Deployment ID is required");
+  if (!deploymentId.trim()) {
+    throw new Error("Deployment ID required");
   }
 
-  if (!networkAlias?.trim()) {
-    throw new Error("Network alias is required");
+  if (!networkAlias.trim()) {
+    throw new Error("Network alias required");
   }
 
-  if (!domain?.trim()) {
-    throw new Error("Domain is required");
+  if (!domain.trim()) {
+    throw new Error("Domain required");
   }
 }
-
 
 export async function generateNginxConfig(
   deploymentId: string,
   networkAlias: string,
   domain: string
 ): Promise<string> {
-
   validateInput(
     deploymentId,
     networkAlias,
     domain
   );
 
-
   await ensureOutputDirectory();
 
+  const template = await fs.readFile(
+    TEMPLATE_FILE,
+    "utf8"
+  );
 
-  try {
-
-    await fs.access(
-      TEMPLATE_FILE
+  const config = template
+    .replaceAll(
+      "{{DOMAIN}}",
+      domain.trim().toLowerCase()
+    )
+    .replaceAll(
+      "{{NETWORK_ALIAS}}",
+      networkAlias.trim()
+    )
+    .replaceAll(
+      "{{CONTAINER_NAME}}",
+      networkAlias.trim()
     );
 
-  } catch {
-
+  if (config.includes("{{")) {
     throw new Error(
-      `Nginx template not found: ${TEMPLATE_FILE}`
+      "Unresolved nginx template variables"
     );
-
   }
 
-
-  const template =
-    await fs.readFile(
-      TEMPLATE_FILE,
-      "utf8"
-    );
-
-
-  const normalizedAlias =
-    networkAlias.trim();
-
-
-  const normalizedDomain =
-    domain.trim().toLowerCase();
-
-
-
-  const config =
-    template
-      .replaceAll(
-        "{{DOMAIN}}",
-        normalizedDomain
-      )
-      .replaceAll(
-        "{{NETWORK_ALIAS}}",
-        normalizedAlias
-      )
-      .replaceAll(
-        "{{CONTAINER_NAME}}",
-        normalizedAlias
-      );
-
-
-
-  if (
-    config.includes("{{")
-  ) {
-
-    throw new Error(
-      "Generated nginx config contains unresolved template variables"
-    );
-
-  }
-
-
-
-  const outputFile =
-    path.join(
-      OUTPUT_DIRECTORY,
-      `${deploymentId}.conf`
-    );
-
+  const outputFile = path.join(
+    OUTPUT_DIRECTORY,
+    `${deploymentId}.conf`
+  );
 
   await fs.writeFile(
     outputFile,
@@ -128,95 +84,47 @@ export async function generateNginxConfig(
     "utf8"
   );
 
-
   console.log(
-    "[NGINX] Generated config:",
-    outputFile
+    `[NGINX] created ${outputFile}`
   );
-
-
-  console.log(
-    "[NGINX DEBUG GENERATED]",
-    {
-      deploymentId,
-      upstream: normalizedAlias,
-      domain: normalizedDomain,
-    }
-  );
-
 
   return outputFile;
 }
 
-
-
 export async function removeStaleConfigs(
-  activeContainers: string[]
+  activeDeploymentIds: string[]
 ): Promise<void> {
-
-
   await ensureOutputDirectory();
 
-
-  const files =
-    await fs.readdir(
-      OUTPUT_DIRECTORY
-    );
-
+  const files = await fs.readdir(
+    OUTPUT_DIRECTORY
+  );
 
   for (const file of files) {
-
-
-    if (
-      !file.endsWith(".conf")
-    ) {
+    if (!file.endsWith(".conf")) {
       continue;
     }
 
-
-    if (
-      file === "default.conf"
-    ) {
+    if (file === "default.conf") {
       continue;
     }
 
+    const deploymentId = file.replace(
+      ".conf",
+      ""
+    );
 
-    const filePath =
-      path.join(
-        OUTPUT_DIRECTORY,
-        file
-      );
-
-
-    const content =
-      await fs.readFile(
-        filePath,
-        "utf8"
-      );
-
-
-
-    const active =
-      activeContainers.some(
-        (container) =>
-          content.includes(container)
-      );
-
-
-
-    if (!active) {
-
+    if (!activeDeploymentIds.includes(deploymentId)) {
       await fs.unlink(
-        filePath
+        path.join(
+          OUTPUT_DIRECTORY,
+          file
+        )
       );
-
 
       console.log(
-        `[NGINX] Removed stale config: ${file}`
+        `[NGINX CLEANUP] removed ${file}`
       );
-
     }
-
   }
-
 }

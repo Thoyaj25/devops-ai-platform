@@ -1,7 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
+
 import type { DeploymentStatus } from "@/generated/prisma";
+
 
 type Props = {
   deploymentId: string;
@@ -9,82 +16,282 @@ type Props = {
   initialStatus?: DeploymentStatus;
 };
 
+
 type StreamPayload = {
   status: DeploymentStatus;
   logs: string | null;
 };
 
-export default function DeploymentLogs({
-  deploymentId,
-  initialLogs = "",
-  initialStatus = "RUNNING",
-}: Props) {
-  const [logs, setLogs] = useState(initialLogs);
-  const [status, setStatus] = useState<DeploymentStatus>(initialStatus);
 
-  useEffect(() => {
-    if (!deploymentId) return;
+type ConnectionState =
+  | "Connecting"
+  | "Streaming"
+  | "Completed"
+  | "Disconnected";
 
-    console.log("=== FRONTEND: Opening EventSource stream for deployment ===", deploymentId);
 
-    const source = new EventSource(
-      `/api/deployments/${deploymentId}/stream`
-    );
-
-    source.onopen = () => {
-      console.log("=== FRONTEND: EventSource connection established successfully ===");
+type ConnectionAction =
+  | {
+      type: "reset";
+    }
+  | {
+      type: "streaming";
+    }
+  | {
+      type: "completed";
+    }
+  | {
+      type: "disconnected";
     };
 
-    source.onmessage = (event) => {
-      console.log("=== FRONTEND: Received message from stream ===", event.data);
-      const data: StreamPayload = JSON.parse(event.data);
 
-      setLogs(data.logs ?? "");
-      setStatus(data.status);
+function connectionReducer(
+  state: ConnectionState,
+  action: ConnectionAction
+): ConnectionState {
 
-      const terminalStates = [
+  switch (action.type) {
+
+    case "reset":
+      return "Connecting";
+
+    case "streaming":
+      return "Streaming";
+
+    case "completed":
+      return "Completed";
+
+    case "disconnected":
+      return "Disconnected";
+
+    default:
+      return state;
+  }
+}
+
+
+const TERMINAL_STATES: DeploymentStatus[] = [
   "SUCCESS",
   "FAILED",
   "SUPERSEDED",
-  "CANCELLED",
 ];
 
-if (terminalStates.includes(data.status)) {
-  console.log(
-    "=== FRONTEND: Deployment finished with status, closing stream ===",
-    data.status
+
+export default function DeploymentLogs({
+  deploymentId,
+  initialLogs = "",
+  initialStatus = "PENDING",
+}: Props) {
+
+  const [logs, setLogs] =
+    useState(initialLogs);
+
+  const [status, setStatus] =
+    useState<DeploymentStatus>(initialStatus);
+
+
+  const [
+    connectionState,
+    dispatchConnectionState,
+  ] = useReducer(
+    connectionReducer,
+    TERMINAL_STATES.includes(initialStatus)
+      ? "Completed"
+      : "Connecting"
   );
 
-  source.close();
-}
+
+  const eventSourceRef =
+    useRef<EventSource | null>(null);
+
+
+
+  useEffect(() => {
+
+    if (!deploymentId) {
+      return;
+    }
+
+
+    // Already finished deployment
+    if (
+      TERMINAL_STATES.includes(status)
+    ) {
+      dispatchConnectionState({
+        type: "completed",
+      });
+
+      return;
+    }
+
+
+    eventSourceRef.current?.close();
+
+
+    dispatchConnectionState({
+      type: "reset",
+    });
+
+
+    const source =
+      new EventSource(
+        `/api/deployments/${deploymentId}/stream`
+      );
+
+
+    eventSourceRef.current = source;
+
+
+
+    source.onopen = () => {
+
+      console.log(
+        "Deployment log stream connected"
+      );
+
+
+      dispatchConnectionState({
+        type: "streaming",
+      });
+
     };
 
-    source.onerror = (error) => {
-      console.error("=== FRONTEND: EventSource connection error occurred ===", error);
-      source.close();
+
+
+    source.onmessage = (event) => {
+
+      try {
+
+        const data: StreamPayload =
+          JSON.parse(event.data);
+
+
+        setStatus(data.status);
+
+
+        if (data.logs) {
+          setLogs(data.logs);
+        }
+
+
+
+        if (
+          TERMINAL_STATES.includes(
+            data.status
+          )
+        ) {
+
+          dispatchConnectionState({
+            type: "completed",
+          });
+
+
+          source.close();
+
+          eventSourceRef.current = null;
+
+        }
+
+
+      } catch(error) {
+
+        console.error(
+          "Invalid SSE payload",
+          error
+        );
+
+      }
+
     };
+
+
+
+    source.onerror = () => {
+
+      console.error(
+        "Deployment log stream disconnected"
+      );
+
+
+      dispatchConnectionState({
+        type: "disconnected",
+      });
+
+
+      source.close();
+
+      eventSourceRef.current = null;
+
+    };
+
+
 
     return () => {
-      console.log("=== FRONTEND: Cleaning up EventSource connection ===");
+
       source.close();
+
+      eventSourceRef.current = null;
+
     };
-  }, [deploymentId]);
+
+
+  }, [deploymentId, status]);
+
+
 
   return (
+
     <div className="rounded-xl border p-6">
+
+
       <div className="mb-4 flex items-center justify-between">
+
+
         <h2 className="text-xl font-semibold">
           Deployment Logs
         </h2>
 
-        <span className="rounded bg-gray-100 px-3 py-1 text-sm">
-          {status}
-        </span>
+
+
+        <div className="flex gap-2">
+
+
+          <span className="rounded bg-gray-100 px-3 py-1 text-sm">
+            {status}
+          </span>
+
+
+
+          <span className="rounded bg-blue-100 px-3 py-1 text-sm">
+            {connectionState}
+          </span>
+
+
+        </div>
+
+
       </div>
 
-      <pre className="h-96 overflow-auto rounded bg-black p-4 text-sm text-green-400 whitespace-pre-wrap">
-        {logs || "Waiting for logs..."}
+
+
+
+      <pre
+        className="
+          h-96
+          overflow-auto
+          whitespace-pre-wrap
+          rounded
+          bg-black
+          p-4
+          text-sm
+          text-green-400
+        "
+      >
+        {logs || "Waiting for deployment logs..."}
       </pre>
+
+
     </div>
+
   );
 }

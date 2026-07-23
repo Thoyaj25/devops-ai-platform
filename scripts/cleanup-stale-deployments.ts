@@ -1,21 +1,49 @@
-import "dotenv/config";
 import { prisma } from "@/lib/prisma";
 import { DeploymentStatus } from "@/generated/prisma";
 
-async function main() {
-  await prisma.deployment.updateMany({
-    where: {
-      status: DeploymentStatus.RUNNING,
-    },
-    data: {
-      status: DeploymentStatus.FAILED,
-      logs: "Deployment terminated: executor was unavailable",
-    },
-  });
+async function cleanup() {
+  const staleStatuses = [
+    DeploymentStatus.PENDING,
+    DeploymentStatus.CHECKING_OUT,
+    DeploymentStatus.BUILDING,
+    DeploymentStatus.DEPLOYING,
+    DeploymentStatus.HEALTH_CHECKING,
+  ];
 
-  console.log("Cleanup completed");
+  const result =
+    await prisma.deployment.updateMany({
+      where: {
+        status: {
+          in: staleStatuses,
+        },
+        updatedAt: {
+          lt: new Date(
+            Date.now() - 30 * 60 * 1000
+          ),
+        },
+      },
+
+      data: {
+        status: DeploymentStatus.FAILED,
+        isHealthy: false,
+      },
+    });
+
+
+  console.log(
+    `Cleaned ${result.count} stale deployments`
+  );
 }
 
-main()
-  .catch(console.error)
-  .finally(() => prisma.$disconnect());
+
+cleanup()
+  .catch((error) => {
+    console.error(
+      "Cleanup failed:",
+      error
+    );
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

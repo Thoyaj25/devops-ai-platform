@@ -1,7 +1,7 @@
 import { EnvironmentType } from "@/generated/prisma";
 import { environmentRepository } from "@/repositories/environmentRepository";
 import { projectRepository } from "@/repositories/projectRepository";
-import { NotFoundError, ForbiddenError } from "@/lib/api/errors";
+import { NotFoundError } from "@/lib/api/errors";
 
 export const environmentService = {
   async getProjectEnvironments(projectId: string) {

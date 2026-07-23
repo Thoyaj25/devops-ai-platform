@@ -1,13 +1,13 @@
+import DeploymentDashboard from "@/components/deployments/DeploymentDashboard";
+
 export default function DeploymentsPage() {
   return (
-    <main className="p-8">
-      <h1 className="text-3xl font-bold">
+    <main className="mx-auto max-w-7xl p-8">
+      <h1 className="mb-8 text-3xl font-bold">
         Deployments
       </h1>
 
-      <p className="mt-4 text-gray-600">
-        Deployment management will be available here.
-      </p>
+      <DeploymentDashboard />
     </main>
   );
 }

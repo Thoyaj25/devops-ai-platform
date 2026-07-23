@@ -1,8 +1,10 @@
-import type { Prisma } from "@/generated/prisma";
+import {
+  Prisma,
+  DeploymentStatus,
+} from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
 
-// Reusable include configuration
-const defaultDeploymentInclude = {
+const deploymentInclude = {
   project: {
     select: {
       id: true,
@@ -37,12 +39,10 @@ const defaultDeploymentInclude = {
   },
 } satisfies Prisma.DeploymentInclude;
 
-// Default ordering
 const defaultOrder: Prisma.DeploymentOrderByWithRelationInput = {
   createdAt: "desc",
 };
 
-// Input types
 type CreateDeploymentData = {
   version?: string;
   projectId: string;
@@ -51,23 +51,26 @@ type CreateDeploymentData = {
 };
 
 type UpdateDeploymentData =
-  Parameters<typeof prisma.deployment.update>[0]["data"];
+  Prisma.DeploymentUpdateInput;
 
 export const deploymentRepository = {
-  // -------------------------
-  // Read operations
-  // -------------------------
+  // ------------------------------------------------------------------
+  // Read
+  // ------------------------------------------------------------------
 
-  /**
-   * Returns the total count of deployments.
-   */
   count() {
     return prisma.deployment.count();
   },
 
-  /**
-   * Retrieves specific log and status data for a deployment.
-   */
+  exists(id: string) {
+    return prisma.deployment.findUnique({
+      where: { id },
+      select: {
+        id: true,
+      },
+    });
+  },
+
   findLogs(id: string) {
     return prisma.deployment.findUnique({
       where: { id },
@@ -80,8 +83,8 @@ export const deploymentRepository = {
 
   findAll() {
     return prisma.deployment.findMany({
+      include: deploymentInclude,
       orderBy: defaultOrder,
-      include: defaultDeploymentInclude,
     });
   },
 
@@ -90,8 +93,8 @@ export const deploymentRepository = {
       where: {
         projectId,
       },
+      include: deploymentInclude,
       orderBy: defaultOrder,
-      include: defaultDeploymentInclude,
     });
   },
 
@@ -100,50 +103,59 @@ export const deploymentRepository = {
       where: {
         environmentId,
       },
+      include: deploymentInclude,
       orderBy: defaultOrder,
-      include: defaultDeploymentInclude,
     });
   },
 
   findById(id: string) {
     return prisma.deployment.findUnique({
-      where: {
-        id,
-      },
-      include: defaultDeploymentInclude,
+      where: { id },
+      include: deploymentInclude,
     });
   },
 
-  /**
-   * Returns the previous successful deployment for the same project
-   * that still owns a running container.
-   */
-  async findPreviousSuccessfulDeployment(
-    projectId: string,
-    currentDeploymentId: string
-  ) {
-    const deployment = await prisma.deployment.findFirst({
+  findLatestSuccessful(projectId: string) {
+    return prisma.deployment.findFirst({
       where: {
         projectId,
-        status: "SUCCESS",
-        id: {
-          not: currentDeploymentId,
-        },
-        containerId: {
-          not: null,
-        },
+        status: DeploymentStatus.SUCCESS,
       },
       orderBy: {
         createdAt: "desc",
       },
+      include: deploymentInclude,
+    });
+  },
+
+  findPreviousSuccessfulDeployment(
+    projectId: string,
+    currentDeploymentId: string
+  ) {
+    return prisma.deployment.findFirst({
+      where: {
+        projectId,
+
+        status: DeploymentStatus.SUCCESS,
+
+        id: {
+          not: currentDeploymentId,
+        },
+
+        containerId: {
+          not: null,
+        },
+      },
+
+      orderBy: {
+        createdAt: "desc",
+      },
+
       select: {
         id: true,
         containerId: true,
       },
     });
-
-    console.log("Cleanup candidate:", deployment);
-    return deployment;
   },
 
   findPreviousSuccessfulDeployments(
@@ -153,17 +165,22 @@ export const deploymentRepository = {
     return prisma.deployment.findMany({
       where: {
         projectId,
-        status: "SUCCESS",
+
+        status: DeploymentStatus.SUCCESS,
+
         id: {
           not: currentDeploymentId,
         },
+
         containerId: {
           not: null,
         },
       },
+
       orderBy: {
         createdAt: "desc",
       },
+
       select: {
         id: true,
         containerId: true,
@@ -171,66 +188,83 @@ export const deploymentRepository = {
     });
   },
 
-  exists(id: string) {
-    return prisma.deployment.findUnique({
+  findActiveDeployment(projectId: string) {
+    return prisma.deployment.findFirst({
       where: {
-        id,
+        projectId,
+
+        status: DeploymentStatus.SUCCESS,
+
+        isHealthy: true,
       },
-      select: {
-        id: true,
+
+      orderBy: {
+        createdAt: "desc",
       },
+
+      include: deploymentInclude,
     });
   },
 
-  // -------------------------
-  // Write operations
-  // -------------------------
-
-  /**
-   * Updates the legacy logs column.
-   */
-  async updateLogs(id: string, logs: string) {
-    return prisma.deployment.update({
-      where: {
-        id,
-      },
-      data: {
-        logs,
-      },
-    });
-  },
+  // ------------------------------------------------------------------
+  // Write
+  // ------------------------------------------------------------------
 
   create(data: CreateDeploymentData) {
     return prisma.deployment.create({
       data: {
         version: data.version,
+
         project: {
           connect: {
             id: data.projectId,
           },
         },
+
         environment: {
           connect: {
             id: data.environmentId,
           },
         },
+
         pipeline: {
           connect: {
             id: data.pipelineId,
           },
         },
       },
-      include: defaultDeploymentInclude,
+
+      include: deploymentInclude,
     });
   },
 
-  update(id: string, data: UpdateDeploymentData) {
+  update(
+    id: string,
+    data: UpdateDeploymentData
+  ) {
     return prisma.deployment.update({
       where: {
         id,
       },
+
       data,
-      include: defaultDeploymentInclude,
+
+      include: deploymentInclude,
+    });
+  },
+
+  updateLogs(
+    id: string,
+    logs: string
+  ) {
+    return prisma.deployment.update({
+      where: {
+        id,
+      },
+
+      data: {
+        logs,
+      },
     });
   },
 

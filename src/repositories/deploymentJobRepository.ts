@@ -1,10 +1,16 @@
-import { JobStatus } from "@/generated/prisma";
+import {
+  JobStatus,
+  Prisma,
+} from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
 
+const defaultOrder: Prisma.DeploymentJobOrderByWithRelationInput = {
+  createdAt: "asc",
+};
+
+type UpdateJobData = Prisma.DeploymentJobUpdateInput;
+
 export const deploymentJobRepository = {
-  /**
-   * Create a new deployment job.
-   */
   async create(deploymentId: string) {
     return prisma.deploymentJob.create({
       data: {
@@ -16,10 +22,7 @@ export const deploymentJobRepository = {
   },
 
   /**
-   * Atomically claim the oldest pending deployment job.
-   *
-   * Uses a single UPDATE ... FROM ... RETURNING statement to avoid
-   * interactive transactions and race conditions.
+   * Atomically claims the oldest eligible deployment job.
    */
   async claimNextJob() {
     const now = new Date();
@@ -28,6 +31,9 @@ export const deploymentJobRepository = {
       UPDATE "DeploymentJob"
       SET
         status = 'RUNNING'::"JobStatus",
+        "startedAt" = NOW(),
+        "completedAt" = NULL,
+        error = NULL,
         "nextRetryAt" = NULL
       WHERE id = (
         SELECT id
@@ -56,40 +62,16 @@ export const deploymentJobRepository = {
     });
   },
 
-  /**
-   * Update deployment job.
-   */
   async update(
     id: string,
-    data: {
-      status?: JobStatus;
-      error?: string | null;
-      nextRetryAt?: Date | null;
-      startedAt?: Date | null;
-      completedAt?: Date | null;
-    }
+    data: UpdateJobData
   ) {
     return prisma.deploymentJob.update({
       where: { id },
-      data: {
-        ...(data.status !== undefined && { status: data.status }),
-        ...(data.error !== undefined && { error: data.error }),
-        ...(data.nextRetryAt !== undefined && {
-          nextRetryAt: data.nextRetryAt,
-        }),
-        ...(data.startedAt !== undefined && {
-          startedAt: data.startedAt,
-        }),
-        ...(data.completedAt !== undefined && {
-          completedAt: data.completedAt,
-        }),
-      },
+      data,
     });
   },
 
-  /**
-   * Increment retry attempts.
-   */
   async incrementAttempts(id: string) {
     return prisma.deploymentJob.update({
       where: { id },
@@ -101,19 +83,17 @@ export const deploymentJobRepository = {
     });
   },
 
-  /**
-   * Find job by ID.
-   */
   async findById(id: string) {
     return prisma.deploymentJob.findUnique({
-      where: { id },
+      where: {
+        id,
+      },
     });
   },
 
-  /**
-   * Find all jobs for a deployment.
-   */
-  async findByDeploymentId(deploymentId: string) {
+  async findByDeploymentId(
+    deploymentId: string
+  ) {
     return prisma.deploymentJob.findMany({
       where: {
         deploymentId,
@@ -124,9 +104,6 @@ export const deploymentJobRepository = {
     });
   },
 
-  /**
-   * Find all pending jobs currently eligible for processing.
-   */
   async findPending() {
     const now = new Date();
 
@@ -144,15 +121,10 @@ export const deploymentJobRepository = {
           },
         ],
       },
-      orderBy: {
-        createdAt: "asc",
-      },
+      orderBy: defaultOrder,
     });
   },
 
-  /**
-   * Reset a job back to pending.
-   */
   async requeue(id: string) {
     return prisma.deploymentJob.update({
       where: {
@@ -161,30 +133,34 @@ export const deploymentJobRepository = {
       data: {
         status: JobStatus.PENDING,
         error: null,
+        startedAt: null,
+        completedAt: null,
         nextRetryAt: null,
       },
     });
   },
 
-  /**
-   * Schedule retry.
-   */
-  async scheduleRetry(id: string, retryAt: Date) {
+  async scheduleRetry(
+    id: string,
+    retryAt: Date
+  ) {
     return prisma.deploymentJob.update({
       where: {
         id,
       },
       data: {
         status: JobStatus.PENDING,
+        error: null,
+        completedAt: null,
         nextRetryAt: retryAt,
       },
     });
   },
 
-  /**
-   * Mark job permanently failed.
-   */
-  async markFailed(id: string, error?: string) {
+  async markFailed(
+    id: string,
+    error?: string
+  ) {
     return prisma.deploymentJob.update({
       where: {
         id,
@@ -192,14 +168,12 @@ export const deploymentJobRepository = {
       data: {
         status: JobStatus.FAILED,
         error: error ?? null,
+        completedAt: new Date(),
         nextRetryAt: null,
       },
     });
   },
 
-  /**
-   * Delete job.
-   */
   async delete(id: string) {
     return prisma.deploymentJob.delete({
       where: {

@@ -22,6 +22,7 @@ export const deploymentStages: DeploymentStage[] = [
   DeploymentStage.QUEUED,
   DeploymentStage.CLONING,
   DeploymentStage.BUILDING,
+  DeploymentStage.PUSHING,
   DeploymentStage.TESTING,
   DeploymentStage.DEPLOYING,
   DeploymentStage.VERIFYING,

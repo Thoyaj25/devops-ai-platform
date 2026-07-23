@@ -1,152 +1,49 @@
 import { DeploymentStatus } from "@/generated/prisma";
 import { deploymentRepository } from "@/repositories/deploymentRepository";
-import { DockerDeploymentProvider } from "@/services/providers";
-import { proxyService } from "@/services/proxy/proxyService";
+import { deploymentLogService } from "./logs/deploymentLogService";
 
-const dockerProvider = new DockerDeploymentProvider();
+type PreviousDeployment = {
+  id: string;
+  containerId: string | null;
+} | null;
 
 export const deploymentCleanupService = {
   async cleanupPreviousDeployment(
-    deployment: {
-      id: string;
-      containerId: string | null;
-    } | null
+    deployment: PreviousDeployment
   ): Promise<void> {
-
     if (!deployment) {
-      console.warn(
-        "[Cleanup] No deployment provided"
+      console.info(
+        "[Cleanup] No previous successful deployment found."
       );
       return;
     }
 
-
-    console.log(
-      "[Cleanup] Starting cleanup:",
-      {
+    try {
+      console.info("[Cleanup] Preserving rollback candidate", {
         deploymentId: deployment.id,
         containerId: deployment.containerId,
-      }
-    );
+      });
 
+      await deploymentRepository.update(deployment.id, {
+        status: DeploymentStatus.SUPERSEDED,
+        isHealthy: false,
+      });
 
-    let cleanupFailed = false;
-
-
-    /*
-     * 1. Remove nginx configuration
-     */
-    try {
-
-      await proxyService.removeDeployment(
-        deployment.id
-      );
-
-      console.log(
-        `[Cleanup] Removed nginx configuration: ${deployment.id}`
-      );
-
-
-    } catch (error: any) {
-
-      if (error?.code === "ENOENT") {
-
-        console.log(
-          `[Cleanup] Nginx config already removed: ${deployment.id}`
-        );
-
-      } else {
-
-        cleanupFailed = true;
-
-        console.error(
-          `[Cleanup] Nginx cleanup failed: ${deployment.id}`,
-          error
-        );
-      }
-    }
-
-
-
-    /*
-     * 2. Remove docker container
-     */
-    if (deployment.containerId) {
-
-      try {
-
-        await dockerProvider.removeContainer(
-          deployment.containerId
-        );
-
-
-        console.log(
-          `[Cleanup] Removed container: ${deployment.containerId}`
-        );
-
-
-      } catch (error) {
-
-        cleanupFailed = true;
-
-        console.error(
-          `[Cleanup] Docker container cleanup failed: ${deployment.containerId}`,
-          error
-        );
-
-      }
-
-    } else {
-
-      console.log(
-        `[Cleanup] No container attached: ${deployment.id}`
-      );
-
-    }
-
-
-
-    /*
-     * 3. Update deployment lifecycle state
-     */
-    try {
-
-      await deploymentRepository.update(
+      await deploymentLogService.append(
         deployment.id,
-        {
-          status: cleanupFailed
-            ? DeploymentStatus.FAILED
-            : DeploymentStatus.SUPERSEDED,
-
-          containerId: null,
-          containerUrl: null,
-          hostPort: null,
-          isHealthy: false,
-        }
+        "Deployment superseded by a newer successful deployment. Preserved for rollback."
       );
 
-
-      console.log(
-        cleanupFailed
-          ? `[Cleanup] Marked failed cleanup: ${deployment.id}`
-          : `[Cleanup] Marked superseded: ${deployment.id}`
+      console.info(
+        `[Cleanup] Deployment ${deployment.id} marked as SUPERSEDED.`
       );
-
-
     } catch (error) {
-
       console.error(
-        `[Cleanup] Failed updating deployment record: ${deployment.id}`,
+        `[Cleanup] Failed to supersede deployment ${deployment.id}`,
         error
       );
 
-      throw error;
+      // Never fail the new deployment because cleanup failed.
     }
-
-
-
-    console.log(
-      `[Cleanup] Completed cleanup: ${deployment.id}`
-    );
   },
 };

@@ -74,7 +74,7 @@ model Pipeline {
 model Deployment {
   id            String           @id @default(cuid())
   version       String?
-  status        DeploymentStatus @default(RUNNING)
+  status DeploymentStatus @default(PENDING)
 
   projectId     String
   environmentId String
@@ -157,9 +157,23 @@ enum ProjectStatus {
 
 enum DeploymentStatus {
   PENDING
-  RUNNING
+
+  CHECKING_OUT
+
+  BUILDING
+
+  DEPLOYING
+
+  HEALTH_CHECKING
+
   SUCCESS
+
   FAILED
+
+  ROLLING_BACK
+
+  ROLLED_BACK
+
   SUPERSEDED
 }
 

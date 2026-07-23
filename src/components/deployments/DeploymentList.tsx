@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { DeploymentStatus } from "@/generated/prisma";
+
 import Badge from "@/components/ui/Badge";
 import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
@@ -11,15 +13,23 @@ import Spinner from "@/components/ui/Spinner";
 type Deployment = {
   id: string;
   version: string | null;
-  status: string;
+  status: DeploymentStatus;
   createdAt: string;
   isHealthy?: boolean;
-  hostPort?: number | null;
+  hostPort?: number |null;
 };
 
 type Props = {
   environmentId: string;
 };
+
+const ACTIVE_DEPLOYMENT_STATES: DeploymentStatus[] = [
+  "PENDING",
+  "CHECKING_OUT",
+  "BUILDING",
+  "DEPLOYING",
+  "HEALTH_CHECKING",
+];
 
 export default function DeploymentList({
   environmentId,
@@ -47,7 +57,9 @@ export default function DeploymentList({
         }
 
         setDeployments(
-          Array.isArray(result.data) ? result.data : []
+          Array.isArray(result.data)
+            ? result.data
+            : []
         );
       } catch (error) {
         console.error(
@@ -83,14 +95,26 @@ export default function DeploymentList({
             const isActive =
               deployment.status === "SUCCESS";
 
-            const isRunning =
-              deployment.status === "RUNNING";
+            const isDeploying =
+              ACTIVE_DEPLOYMENT_STATES.includes(
+                deployment.status
+              );
 
-            const isFailed =
-              deployment.status === "FAILED";
+            const isRollingBack =
+              deployment.status ===
+              "ROLLING_BACK";
+
+            const isRolledBack =
+              deployment.status ===
+              "ROLLED_BACK";
 
             const isSuperseded =
-              deployment.status === "SUPERSEDED";
+              deployment.status ===
+              "SUPERSEDED";
+
+            const isFailed =
+              deployment.status ===
+              "FAILED";
 
             return (
               <Link
@@ -99,17 +123,15 @@ export default function DeploymentList({
                 className="block"
               >
                 <Card className="cursor-pointer transition-all hover:bg-gray-50 hover:shadow-md">
-
                   <div className="flex items-start justify-between">
 
                     <div className="space-y-2">
-
                       <h3 className="font-semibold">
                         {deployment.version ??
                           "Unknown Version"}
                       </h3>
 
-                      <p className="font-mono text-xs text-gray-500 break-all">
+                      <p className="break-all font-mono text-xs text-gray-500">
                         {deployment.id}
                       </p>
 
@@ -124,7 +146,6 @@ export default function DeploymentList({
                           Port: {deployment.hostPort}
                         </p>
                       )}
-
                     </div>
 
                     <div className="flex flex-col items-end gap-2">
@@ -135,9 +156,21 @@ export default function DeploymentList({
                         </Badge>
                       )}
 
-                      {isRunning && (
+                      {isDeploying && (
                         <Badge>
                           🔵 Deploying
+                        </Badge>
+                      )}
+
+                      {isRollingBack && (
+                        <Badge>
+                          🟠 Rolling Back
+                        </Badge>
+                      )}
+
+                      {isRolledBack && (
+                        <Badge>
+                          ⚪ Rolled Back
                         </Badge>
                       )}
 
@@ -162,7 +195,6 @@ export default function DeploymentList({
                     </div>
 
                   </div>
-
                 </Card>
               </Link>
             );

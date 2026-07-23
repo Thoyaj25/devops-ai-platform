@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { DeploymentStatus } from "@/generated/prisma";
+
 import Badge from "@/components/ui/Badge";
 
 type Deployment = {
   id: string;
   version: string | null;
-  status: string;
+  status: DeploymentStatus;
   createdAt: string;
   isHealthy?: boolean;
   hostPort?: number | null;
@@ -30,53 +32,103 @@ type Deployment = {
 
 type ApiResponse<T> = {
   success: boolean;
-  data: T;
+  data?: T;
   error?: string;
 };
 
+type Props = {
+  projectId: string;
+};
+
+const ACTIVE_DEPLOYMENT_STATES: DeploymentStatus[] = [
+  "PENDING",
+  "CHECKING_OUT",
+  "BUILDING",
+  "DEPLOYING",
+  "HEALTH_CHECKING",
+];
+
 export default function DeploymentHistory({
   projectId,
-}: {
-  projectId: string;
-}) {
+}: Props) {
   const [deployments, setDeployments] = useState<Deployment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
+    let mounted = true;
+
     async function loadDeployments() {
       try {
-        const res = await fetch(
-          `/api/deployments?projectId=${projectId}`
+        setLoading(true);
+        setError("");
+
+        const response = await fetch(
+          `/api/deployments?projectId=${projectId}`,
+          {
+            cache: "no-store",
+          }
         );
 
-        if (!res.ok) {
+        if (!response.ok) {
           throw new Error("Failed to fetch deployments");
         }
 
         const result =
-          (await res.json()) as ApiResponse<Deployment[]>;
+          (await response.json()) as ApiResponse<
+            Deployment[]
+          >;
 
         if (!result.success) {
           throw new Error(
-            result.error ?? "Failed to fetch deployments"
+            result.error ??
+              "Failed to fetch deployments"
           );
         }
 
+        if (!mounted) {
+          return;
+        }
+
         setDeployments(result.data ?? []);
-      } catch (error) {
-        console.error(error);
+      } catch (err) {
+        console.error(err);
+
+        if (!mounted) {
+          return;
+        }
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load deployments"
+        );
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
 
     loadDeployments();
+
+    return () => {
+      mounted = false;
+    };
   }, [projectId]);
 
   if (loading) {
     return (
       <div className="rounded-xl border p-6">
         Loading deployments...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-red-300 bg-red-50 p-6 text-red-600">
+        {error}
       </div>
     );
   }
@@ -89,7 +141,7 @@ export default function DeploymentHistory({
 
       {deployments.length === 0 ? (
         <p className="mt-4 text-gray-500">
-          No deployments found.
+          No deployments found for this project.
         </p>
       ) : (
         <div className="mt-4 space-y-4">
@@ -97,19 +149,32 @@ export default function DeploymentHistory({
             const isActive =
               deployment.status === "SUCCESS";
 
-            const isRunning =
-              deployment.status === "RUNNING";
+            const isDeploying =
+              ACTIVE_DEPLOYMENT_STATES.includes(
+                deployment.status
+              );
 
-            const isFailed =
-              deployment.status === "FAILED";
+            const isRollingBack =
+              deployment.status ===
+              "ROLLING_BACK";
+
+            const isRolledBack =
+              deployment.status ===
+              "ROLLED_BACK";
 
             const isSuperseded =
-              deployment.status === "SUPERSEDED";
+              deployment.status ===
+              "SUPERSEDED";
+
+            const isFailed =
+              deployment.status ===
+              "FAILED";
 
             return (
               <Link
                 key={deployment.id}
                 href={`/deployments/${deployment.id}`}
+                className="block"
               >
                 <div className="rounded-lg border p-4 transition hover:bg-gray-50 hover:shadow-md">
 
@@ -122,27 +187,23 @@ export default function DeploymentHistory({
                           "Unknown Version"}
                       </p>
 
-                      <p className="font-mono text-xs text-gray-500 break-all">
+                      <p className="break-all font-mono text-xs text-gray-500">
                         {deployment.id}
                       </p>
 
                       <p className="text-sm text-gray-500">
-                        Environment:
-                        {" "}
+                        Environment:{" "}
                         {deployment.environment.name}
                       </p>
 
                       <p className="text-sm text-gray-500">
-                        Pipeline:
-                        {" "}
+                        Pipeline:{" "}
                         {deployment.pipeline.name}
                       </p>
 
                       {deployment.hostPort && (
                         <p className="text-sm text-gray-500">
-                          Port:
-                          {" "}
-                          {deployment.hostPort}
+                          Port: {deployment.hostPort}
                         </p>
                       )}
 
@@ -156,9 +217,21 @@ export default function DeploymentHistory({
                         </Badge>
                       )}
 
-                      {isRunning && (
+                      {isDeploying && (
                         <Badge>
                           🔵 Deploying
+                        </Badge>
+                      )}
+
+                      {isRollingBack && (
+                        <Badge>
+                          🟠 Rolling Back
+                        </Badge>
+                      )}
+
+                      {isRolledBack && (
+                        <Badge>
+                          ⚪ Rolled Back
                         </Badge>
                       )}
 

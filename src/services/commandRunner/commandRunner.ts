@@ -1,15 +1,19 @@
-import { spawn } from "node:child_process";
+import { spawn, ChildProcess } from "node:child_process";
 
 export interface CommandOptions {
   command: string;
   args?: string[];
   cwd: string;
+
   env?: NodeJS.ProcessEnv;
+
   timeoutMs?: number;
 
   onStdout?: (data: string) => Promise<void> | void;
+
   onStderr?: (data: string) => Promise<void> | void;
 }
+
 
 export interface CommandResult {
   exitCode: number;
@@ -17,96 +21,311 @@ export interface CommandResult {
   stderr: string;
 }
 
-export const commandRunner = {
-  async run(options: CommandOptions): Promise<CommandResult> {
-    return new Promise((resolve, reject) => {
-      console.log("Running:", options.command, options.args);
 
-      const child = spawn(
-        options.command,
-        options.args ?? [],
-        {
-          cwd: options.cwd,
-          env: {
-            ...process.env,
-            ...options.env,
-          },
-          shell: false,
-        }
-      );
+function killProcessTree(
+  child: ChildProcess
+) {
 
-      let stdout = "";
-      let stderr = "";
-
-      // Track pending async callbacks to ensure we don't resolve prematurely
-      const pendingCallbacks: Promise<void>[] = [];
-
-      child.stdout.on("data", (data) => {
-        const text = data.toString();
-        stdout += text;
-
-        if (options.onStdout) {
-          const result = options.onStdout(text);
-          if (result instanceof Promise) {
-            pendingCallbacks.push(result);
-          }
-        }
-      });
-
-      child.stderr.on("data", (data) => {
-        const text = data.toString();
-        stderr += text;
-
-        if (options.onStderr) {
-          const result = options.onStderr(text);
-          if (result instanceof Promise) {
-            pendingCallbacks.push(result);
-          }
-        }
-      });
-
-      let timeout: NodeJS.Timeout | undefined;
-
-      if (options.timeoutMs) {
-        timeout = setTimeout(() => {
-          child.kill("SIGTERM");
-        }, options.timeoutMs);
-      }
-
-      child.on("error", (error) => {
-  if (timeout) {
-    clearTimeout(timeout);
+  if (!child.pid) {
+    return;
   }
 
-  reject(
-    new Error(
-      `Failed to execute '${options.command}': ${error.message}`
-    )
-  );
-});
 
-      child.on("close", async (code) => {
-        if (timeout) {
-          clearTimeout(timeout);
+  try {
+
+    process.kill(
+      child.pid,
+      "SIGTERM"
+    );
+
+
+  } catch {
+
+  }
+
+}
+
+
+
+export const commandRunner = {
+
+
+  async run(
+    options: CommandOptions
+  ): Promise<CommandResult> {
+
+
+    return new Promise(
+      (resolve, reject) => {
+
+
+        console.log(
+          "[COMMAND]",
+          options.command,
+          options.args ?? []
+        );
+
+
+
+        const child =
+          spawn(
+            options.command,
+            options.args ?? [],
+            {
+              cwd: options.cwd,
+
+              env: {
+                ...process.env,
+                ...options.env,
+              },
+
+              shell:false,
+
+              detached:true,
+            }
+          );
+
+
+
+        let stdout = "";
+
+        let stderr = "";
+
+
+
+        const callbacks =
+          new Set<Promise<void>>();
+
+
+
+
+        const registerCallback =
+          (
+            callback?: (
+              data:string
+            )=>Promise<void>|void,
+
+            data?:string
+          )=>{
+
+            if(!callback || !data){
+              return;
+            }
+
+
+            const result =
+              callback(data);
+
+
+            if(
+              result instanceof Promise
+            ){
+
+              const promise =
+                result.finally(
+                  ()=>{
+                    callbacks.delete(
+                      promise
+                    );
+                  }
+                );
+
+
+              callbacks.add(
+                promise
+              );
+
+            }
+
+          };
+
+
+
+
+
+        child.stdout?.on(
+          "data",
+          data=>{
+
+            const text =
+              data.toString();
+
+
+            stdout += text;
+
+
+            registerCallback(
+              options.onStdout,
+              text
+            );
+
+          }
+        );
+
+
+
+
+        child.stderr?.on(
+          "data",
+          data=>{
+
+            const text =
+              data.toString();
+
+
+            stderr += text;
+
+
+            registerCallback(
+              options.onStderr,
+              text
+            );
+
+          }
+        );
+
+
+
+
+
+        let timeout:
+          NodeJS.Timeout | undefined;
+
+
+
+        let killTimeout:
+          NodeJS.Timeout | undefined;
+
+
+
+        if(
+          options.timeoutMs
+        ){
+
+          timeout =
+            setTimeout(
+              ()=>{
+
+
+                console.error(
+                  `[TIMEOUT] ${options.command}`
+                );
+
+
+                killProcessTree(
+                  child
+                );
+
+
+                killTimeout =
+                  setTimeout(
+                    ()=>{
+
+                      try {
+
+                        process.kill(
+                          child.pid!,
+                          "SIGKILL"
+                        );
+
+                      }
+                      catch{}
+
+                    },
+                    5000
+                  );
+
+
+              },
+              options.timeoutMs
+            );
+
         }
 
-        console.log("Process exited:", code);
 
-        // Wait for all outstanding async callbacks to complete
-        try {
-          console.log("Waiting for log callbacks...");
-          await Promise.all(pendingCallbacks);
-          console.log("All log callbacks completed");
 
-          resolve({
-            exitCode: code ?? -1,
-            stdout,
-            stderr,
-          });
-        } catch (error) {
-          reject(error);
-        }
-      });
-    });
+
+
+        child.on(
+          "error",
+          error=>{
+
+
+            if(timeout){
+              clearTimeout(timeout);
+            }
+
+
+            if(killTimeout){
+              clearTimeout(killTimeout);
+            }
+
+
+
+            reject(
+              new Error(
+                `Command failed: ${options.command}: ${error.message}`
+              )
+            );
+
+
+          }
+        );
+
+
+
+
+
+        child.on(
+          "close",
+          async code=>{
+
+
+            if(timeout){
+              clearTimeout(timeout);
+            }
+
+
+            if(killTimeout){
+              clearTimeout(killTimeout);
+            }
+
+
+
+            try{
+
+
+              await Promise.all(
+                Array.from(callbacks)
+              );
+
+
+
+              resolve({
+
+                exitCode:
+                  code ?? -1,
+
+                stdout,
+
+                stderr,
+
+              });
+
+
+            }
+            catch(error){
+
+              reject(error);
+
+            }
+
+          }
+        );
+
+      }
+    );
+
   },
+
 };

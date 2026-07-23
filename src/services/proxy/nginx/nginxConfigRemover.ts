@@ -34,10 +34,15 @@ export async function removeNginxConfig(
     );
 
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorCode =
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error
+        ? (error as { code?: string }).code
+        : undefined;
 
-
-    if (error.code === "ENOENT") {
+    if (errorCode === "ENOENT") {
 
       console.log(
         "[NGINX] Config already removed:",

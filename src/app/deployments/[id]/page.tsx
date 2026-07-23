@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
+
+import { DeploymentStatus } from "@/generated/prisma";
 
 import Badge from "@/components/ui/Badge";
 import Card from "@/components/ui/Card";
-
 import DeploymentLogs from "@/components/deployments/DeploymentLogs";
 import DeploymentControls from "@/components/deployments/DeploymentControls";
 
@@ -23,6 +25,14 @@ async function getDeployment(id: string) {
   }
 }
 
+const ACTIVE_DEPLOYMENT_STATES: DeploymentStatus[] = [
+  "PENDING",
+  "CHECKING_OUT",
+  "BUILDING",
+  "DEPLOYING",
+  "HEALTH_CHECKING",
+];
+
 export default async function DeploymentPage({
   params,
 }: Props) {
@@ -41,9 +51,25 @@ export default async function DeploymentPage({
     .join("\n");
 
   const isActive = deployment.status === "SUCCESS";
-  const isSuperseded = deployment.status === "SUPERSEDED";
+
+  const isDeploying = ACTIVE_DEPLOYMENT_STATES.includes(
+    deployment.status
+  );
+
   const isFailed = deployment.status === "FAILED";
-  const isRunning = deployment.status === "RUNNING";
+
+  const isSuperseded =
+    deployment.status === "SUPERSEDED";
+
+  const isRollingBack =
+    deployment.status === "ROLLING_BACK";
+
+  const isRolledBack =
+    deployment.status === "ROLLED_BACK";
+
+  const localhostUrl = deployment.hostPort
+    ? `http://localhost:${deployment.hostPort}`
+    : null;
 
   return (
     <main className="mx-auto max-w-4xl space-y-8 p-8">
@@ -58,6 +84,7 @@ export default async function DeploymentPage({
             <p className="text-sm text-gray-500">
               Deployment ID
             </p>
+
             <p className="font-mono break-all">
               {deployment.id}
             </p>
@@ -68,10 +95,29 @@ export default async function DeploymentPage({
               Deployment State
             </p>
 
-            {isActive && <Badge>🟢 Active (Live)</Badge>}
-            {isRunning && <Badge>🔵 Deploying</Badge>}
-            {isSuperseded && <Badge>🟡 Superseded</Badge>}
-            {isFailed && <Badge>🔴 Failed</Badge>}
+            {isActive && (
+              <Badge>🟢 Active (Live)</Badge>
+            )}
+
+            {isDeploying && (
+              <Badge>🔵 Deploying</Badge>
+            )}
+
+            {isRollingBack && (
+              <Badge>🟠 Rolling Back</Badge>
+            )}
+
+            {isRolledBack && (
+              <Badge>⚪ Rolled Back</Badge>
+            )}
+
+            {isSuperseded && (
+              <Badge>🟡 Superseded</Badge>
+            )}
+
+            {isFailed && (
+              <Badge>🔴 Failed</Badge>
+            )}
           </div>
 
           <div>
@@ -79,9 +125,7 @@ export default async function DeploymentPage({
               Internal Status
             </p>
 
-            <Badge>
-              {deployment.status}
-            </Badge>
+            <Badge>{deployment.status}</Badge>
           </div>
 
           <div>
@@ -89,9 +133,7 @@ export default async function DeploymentPage({
               Version
             </p>
 
-            <p>
-              {deployment.version ?? "N/A"}
-            </p>
+            <p>{deployment.version ?? "N/A"}</p>
           </div>
 
           <div>
@@ -99,9 +141,7 @@ export default async function DeploymentPage({
               Project
             </p>
 
-            <p>
-              {deployment.project.name}
-            </p>
+            <p>{deployment.project.name}</p>
           </div>
 
           <div>
@@ -109,9 +149,7 @@ export default async function DeploymentPage({
               Environment
             </p>
 
-            <p>
-              {deployment.environment.name}
-            </p>
+            <p>{deployment.environment.name}</p>
           </div>
 
           <div>
@@ -119,9 +157,7 @@ export default async function DeploymentPage({
               Pipeline
             </p>
 
-            <p>
-              {deployment.pipeline.name}
-            </p>
+            <p>{deployment.pipeline.name}</p>
           </div>
 
           <div>
@@ -130,8 +166,7 @@ export default async function DeploymentPage({
             </p>
 
             <p className="font-mono break-all">
-              {deployment.containerId ??
-                "Container Removed"}
+              {deployment.containerId ?? "Container Removed"}
             </p>
           </div>
 
@@ -140,9 +175,17 @@ export default async function DeploymentPage({
               Host Port
             </p>
 
-            <p>
-              {deployment.hostPort ?? "-"}
-            </p>
+            {localhostUrl ? (
+              <Link
+                href={localhostUrl}
+                target="_blank"
+                className="text-blue-600 underline"
+              >
+                {deployment.hostPort}
+              </Link>
+            ) : (
+              <p>-</p>
+            )}
           </div>
 
           <div>
@@ -150,9 +193,17 @@ export default async function DeploymentPage({
               Container URL
             </p>
 
-            <p className="break-all">
-              {deployment.containerUrl ?? "-"}
-            </p>
+            {deployment.containerUrl ? (
+              <Link
+                href={deployment.containerUrl}
+                target="_blank"
+                className="break-all text-blue-600 underline"
+              >
+                {deployment.containerUrl}
+              </Link>
+            ) : (
+              <p>-</p>
+            )}
           </div>
 
           <div>
@@ -162,8 +213,8 @@ export default async function DeploymentPage({
 
             <Badge>
               {deployment.isHealthy
-                ? "Healthy"
-                : "Not Healthy"}
+                ? "🟢 Healthy"
+                : "🔴 Unhealthy"}
             </Badge>
           </div>
 
@@ -181,7 +232,7 @@ export default async function DeploymentPage({
 
           <div>
             <p className="text-sm text-gray-500">
-              Updated
+              Last Updated
             </p>
 
             <p>
@@ -190,6 +241,7 @@ export default async function DeploymentPage({
               ).toLocaleString()}
             </p>
           </div>
+
         </div>
       </Card>
 
@@ -201,7 +253,7 @@ export default async function DeploymentPage({
 
       <Card title="Deployment Logs">
         <DeploymentLogs
-          deploymentId={id}
+          deploymentId={deployment.id}
           initialLogs={
             initialLogText ||
             deployment.logs ||

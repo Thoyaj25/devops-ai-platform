@@ -1,83 +1,293 @@
-import { JobStatus } from "@/generated/prisma";
+import {
+  JobStatus,
+  Prisma,
+} from "@/generated/prisma";
+
 import { deploymentJobRepository } from "@/repositories/deploymentJobRepository";
 
+
+type UpdateJobData =
+  Prisma.DeploymentJobUpdateInput;
+
+
+
+function requireId(id:string) {
+
+  if (!id?.trim()) {
+    throw new Error(
+      "Job ID is required"
+    );
+  }
+
+}
+
+
+
 export const deploymentJobService = {
-  /**
-   * Creates a deployment job.
-   */
-  async createJob(deploymentId: string) {
-    if (!deploymentId) {
-      throw new Error("Deployment ID is required");
-    }
 
-    return deploymentJobRepository.create(deploymentId);
-  },
 
-  /**
-   * Claims the next pending deployment job.
-   */
-  async claimNextJob() {
-    return deploymentJobRepository.claimNextJob();
-  },
 
-  /**
-   * Updates the status of a deployment job.
-   */
-  async updateJob(
-    id: string,
-    data: {
-      status?: JobStatus;
-      error?: string | null;
-      nextRetryAt?: Date | null;
-      startedAt?: Date | null;
-      completedAt?: Date | null;
-    }
+  async createJob(
+    deploymentId:string
   ) {
-    return deploymentJobRepository.update(id, data);
+
+    if (!deploymentId?.trim()) {
+
+      throw new Error(
+        "Deployment ID is required"
+      );
+
+    }
+
+
+    return deploymentJobRepository.create(
+      deploymentId
+    );
+
   },
 
-  /**
-   * Increments the retry attempt count.
-   */
-  async incrementAttempts(id: string) {
-    return deploymentJobRepository.incrementAttempts(id);
+
+
+
+  async claimNextJob() {
+
+    return deploymentJobRepository.claimNextJob();
+
   },
 
-  /**
-   * Finds a deployment job by ID.
-   */
-  async findJob(id: string) {
-    return deploymentJobRepository.findById(id);
+
+
+
+  async findById(
+    id:string
+  ) {
+
+    requireId(id);
+
+    return deploymentJobRepository.findById(
+      id
+    );
+
   },
 
-  /**
-   * Finds a deployment job by ID.
-   */
-  async findById(id: string) {
-    return deploymentJobRepository.findById(id);
+
+
+
+  async updateJob(
+    id:string,
+    data:UpdateJobData
+  ) {
+
+    requireId(id);
+
+    return deploymentJobRepository.update(
+      id,
+      data
+    );
+
   },
 
-  /**
-   * Schedule a delayed retry.
-   */
-  async scheduleRetry(id: string, retryAt: Date) {
+
+
+
+  async markRunning(
+    id:string
+  ) {
+
+    requireId(id);
+
+
+    return deploymentJobRepository.update(
+      id,
+      {
+
+        status:
+          JobStatus.RUNNING,
+
+        startedAt:
+          new Date(),
+
+        error:
+          null,
+
+      }
+    );
+
+  },
+
+
+
+
+  async markCompleted(
+    id:string
+  ) {
+
+    requireId(id);
+
+
+    return deploymentJobRepository.update(
+      id,
+      {
+
+        status:
+          JobStatus.COMPLETED,
+
+        completedAt:
+          new Date(),
+
+        error:
+          null,
+
+        nextRetryAt:
+          null,
+
+      }
+    );
+
+  },
+
+
+
+
+  async incrementAttempts(
+    id:string
+  ) {
+
+    requireId(id);
+
+    return deploymentJobRepository.incrementAttempts(
+      id
+    );
+
+  },
+
+
+
+
+  async scheduleRetry(
+    id:string,
+    retryAt:Date
+  ) {
+
+    requireId(id);
+
+
+    if (
+      retryAt.getTime()
+      <= Date.now()
+    ) {
+
+      throw new Error(
+        "Retry time must be in the future"
+      );
+
+    }
+
+
     return deploymentJobRepository.scheduleRetry(
       id,
       retryAt
     );
+
   },
 
-  /**
-   * Requeues a deployment job.
-   */
-  async requeueJob(id: string) {
-    return deploymentJobRepository.requeue(id);
+
+
+
+  async requeueJob(
+    id:string
+  ) {
+
+    requireId(id);
+
+    return deploymentJobRepository.requeue(
+      id
+    );
+
   },
 
-  /**
-   * Permanently marks a deployment job as failed.
-   */
-  async markFailed(id: string, error?: string) {
-    return deploymentJobRepository.markFailed(id, error);
+
+
+
+  async markFailed(
+    id:string,
+    error?:string
+  ) {
+
+    requireId(id);
+
+
+    return deploymentJobRepository.markFailed(
+      id,
+      error
+    );
+
   },
+
+
+
+
+  async failWithRetry(
+    id:string,
+    error:string,
+    retrySeconds:number
+  ) {
+
+
+    requireId(id);
+
+
+
+    await this.incrementAttempts(
+      id
+    );
+
+
+
+    const job =
+      await this.findById(
+        id
+      );
+
+
+
+    if (!job) {
+
+      throw new Error(
+        "Deployment job not found"
+      );
+
+    }
+
+
+
+    if (
+      job.attempts < 3
+    ) {
+
+
+      const retryAt =
+        new Date(
+          Date.now()
+          +
+          retrySeconds * 1000
+        );
+
+
+      return this.scheduleRetry(
+        id,
+        retryAt
+      );
+
+    }
+
+
+
+    return this.markFailed(
+      id,
+      error
+    );
+
+  },
+
 };
