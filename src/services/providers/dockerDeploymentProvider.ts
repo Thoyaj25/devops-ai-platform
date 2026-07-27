@@ -1,25 +1,50 @@
-import { commandRunner } from "@/services/commandRunner/commandRunner";
-import { deploymentLogService } from "@/services/deployment/logs/deploymentLogService";
+import { deploymentLogService } 
+from "@/services/deployment/logs/deploymentLogService";
+
 import {
   DeploymentProvider,
   DeployResult,
   ContainerInfo,
 } from "./deploymentProvider";
 
+import { dockerClient } 
+from "@/services/docker/dockerClient";
 
-const sleep = (ms:number)=>
-  new Promise(resolve=>setTimeout(resolve,ms));
+import { dockerContainerService }
+from "@/services/docker/dockerContainerService";
+
+import { dockerImageService }
+from "@/services/docker/dockerImageService";
+
+import { deploymentHealthChecker }
+from "@/services/deployment/health/deploymentHealthChecker";
 
 
-export class DockerDeploymentProvider implements DeploymentProvider {
+
+export class DockerDeploymentProvider
+implements DeploymentProvider {
 
 
-  private registry =
-    process.env.DOCKER_REGISTRY ?? "docker.io";
+  private domain =
+    process.env.DEPLOYMENT_DOMAIN ??
+    "marketsphere.local";
 
 
-  private network =
-    process.env.DOCKER_NETWORK ?? "marketsphere";
+
+  private log(
+    deploymentId:string,
+    message:string
+  ){
+
+    return deploymentLogService.append(
+      deploymentId,
+      message
+    );
+
+  }
+
+
+
 
 
   async checkout(
@@ -27,52 +52,28 @@ export class DockerDeploymentProvider implements DeploymentProvider {
     repository:string,
     workspace:string,
     branch="main"
-  ):Promise<void>{
+  ){
 
 
-    await deploymentLogService.append(
+    await this.log(
       deploymentId,
-      `Preparing workspace ${workspace}`
+      `Cloning ${repository}`
     );
 
 
-    await commandRunner.run({
-      command:"rm",
-      args:["-rf",workspace],
-      cwd:process.cwd()
-    });
+    await dockerClient.removeWorkspace(
+      workspace
+    );
 
 
-    const result =
-      await commandRunner.run({
-
-        command:"git",
-
-        args:[
-          "clone",
-          "--depth",
-          "1",
-          "--branch",
-          branch,
-          repository,
-          workspace
-        ],
-
-        cwd:process.cwd()
-
-      });
+    await dockerClient.gitClone(
+      repository,
+      workspace,
+      branch
+    );
 
 
-    if(result.exitCode!==0){
-
-      throw new Error(
-        `Git clone failed: ${result.stderr}`
-      );
-
-    }
-
-
-    await deploymentLogService.append(
+    await this.log(
       deploymentId,
       "Repository cloned"
     );
@@ -80,118 +81,55 @@ export class DockerDeploymentProvider implements DeploymentProvider {
   }
 
 
-async build(
-  deploymentId: string,
-  workspace: string,
-  command?: string
-): Promise<void> {
-
-  const image = process.env.DOCKER_IMAGE;
-
-  if (!image) {
-    throw new Error("DOCKER_IMAGE missing");
-  }
-
-  const tag = deploymentId;
-
-  const fullImage =
-    `${this.registry}/${image}:${tag}`;
-
-  const buildCommand =
-    command ??
-    `docker build --progress=plain -t ${fullImage} .`;
-
-  await deploymentLogService.append(
-    deploymentId,
-    `Building ${fullImage}`
-  );
-
-  const result =
-    await commandRunner.run({
-      command: "sh",
-      args: [
-        "-c",
-        buildCommand
-      ],
-      cwd: workspace,
-      onStdout: data =>
-        deploymentLogService.append(
-          deploymentId,
-          data
-        ),
-      onStderr: data =>
-        deploymentLogService.append(
-          deploymentId,
-          data
-        )
-    });
-
-  if (result.exitCode !== 0) {
-
-    console.error(result.stdout);
-
-    console.error(result.stderr);
-
-    throw new Error(
-      [
-        "",
-        "Docker build failed.",
-        "",
-        "STDOUT:",
-        result.stdout,
-        "",
-        "STDERR:",
-        result.stderr
-      ].join("\n")
-    );
-
-  }
-
-}
 
 
 
-  async push(
+
+  async build(
     deploymentId:string,
-    image:string,
-    tag:string
-  ):Promise<void>{
+    workspace:string
+  ){
 
 
-    const fullImage =
-      `${this.registry}/${image}:${tag}`;
+    const image =
+      process.env.DOCKER_IMAGE;
 
 
-    const result =
-      await commandRunner.run({
-
-        command:"docker",
-
-        args:[
-          "push",
-          fullImage
-        ],
-
-        cwd:process.cwd()
-
-      });
-
-
-    if(result.exitCode!==0){
-
+    if(!image)
       throw new Error(
-        `Docker push failed ${result.stderr}`
+        "DOCKER_IMAGE missing"
       );
 
-    }
 
 
-    await deploymentLogService.append(
+    const tag =
+      `${image}:${deploymentId}`;
+
+
+
+    await this.log(
       deploymentId,
-      "Image pushed"
+      `Building ${tag}`
+    );
+
+
+
+    await dockerImageService.build(
+      workspace,
+      tag
+    );
+
+
+
+    await this.log(
+      deploymentId,
+      "Image build completed"
     );
 
   }
+
+
+
 
 
 
@@ -206,7 +144,7 @@ async build(
 
 
     const fullImage =
-      `${this.registry}/${image}:${tag}`;
+      `${image}:${tag}`;
 
 
 
@@ -215,125 +153,61 @@ async build(
 
 
 
-    await commandRunner.run({
 
-      command:"docker",
-
-      args:[
-        "rm",
-        "-f",
-        containerName
-      ],
-
-      cwd:workspace
-
-    });
+    await dockerContainerService.remove(
+      containerName
+    );
 
 
 
-    await commandRunner.run({
-
-      command:"docker",
-
-      args:[
-        "pull",
-        fullImage
-      ],
-
-      cwd:workspace
-
-    });
 
 
+    const containerId =
+      await dockerContainerService.run({
 
-    const result =
-      await commandRunner.run({
+        name:containerName,
 
-        command:"docker",
+        image:fullImage,
 
-        args:[
-
-          "run",
-
-          "-d",
-
-          "--name",
-          containerName,
-
-
-          "--network",
-          this.network,
-
-
-          "--network-alias",
-          containerName,
-
-
-          "--restart",
-          "unless-stopped",
-
-
-          "-p",
-          "0:3000",
-
-
-          "--label",
-          `marketsphere.deployment=${deploymentId}`,
-
-
-          "-e",
-          "HOSTNAME=0.0.0.0",
-
-
-          fullImage
-
-        ],
-
-        cwd:workspace,
-
-
-        onStdout:data=>
-          deploymentLogService.append(
-            deploymentId,
-            data
-          ),
-
-        onStderr:data=>
-          deploymentLogService.append(
-            deploymentId,
-            data
-          )
+        network:
+        "marketsphere"
 
       });
 
 
 
-    if(result.exitCode!==0){
-
-      throw new Error(
-        `Container start failed ${result.stderr}`
-      );
-
-    }
 
 
-
-    const containerId =
-      result.stdout.trim();
-
-
-
-    await this.waitUntilRunning(
-      deploymentId,
+    await dockerContainerService.waitRunning(
       containerId
     );
 
 
 
-    const port =
-      await this.getMappedPort(
-        containerId
-      );
+
+
+    await deploymentHealthChecker.check(
+      containerName
+    );
+
+
+
+
+
+
+    const containerUrl =
+      `http://${deploymentId}.${this.domain}`;
+
+
+
+
+
+    await this.log(
+      deploymentId,
+      `Deployment ready ${containerUrl}`
+    );
+
+
 
 
 
@@ -343,10 +217,9 @@ async build(
 
       containerName,
 
-      hostPort:port,
+      hostPort:3000,
 
-      containerUrl:
-        `http://${containerName}.marketsphere.local`
+      containerUrl
 
     };
 
@@ -356,44 +229,16 @@ async build(
 
 
 
-  private async waitUntilRunning(
-    deploymentId:string,
-    containerId:string
-  ){
 
 
-    for(
-      let i=0;
-      i<30;
-      i++
-    ){
+
+  async inspect(
+    id:string
+  ):Promise<ContainerInfo>{
 
 
-      const info =
-        await this.inspect(
-          containerId
-        );
-
-
-      if(info.running){
-
-        await deploymentLogService.append(
-          deploymentId,
-          "Container running"
-        );
-
-        return;
-
-      }
-
-
-      await sleep(1000);
-
-    }
-
-
-    throw new Error(
-      "Container failed to start"
+    return dockerContainerService.inspect(
+      id
     );
 
   }
@@ -402,145 +247,72 @@ async build(
 
 
 
-  private async getMappedPort(
-    containerId:string
+
+
+  async stop(id:string): Promise<void>{
+
+  await dockerContainerService.stop(
+    id
+  );
+
+}
+
+
+
+
+
+  async start(id:string): Promise<void>{
+
+  await dockerContainerService.start(
+    id
+  );
+
+}
+
+
+
+
+
+  async restart(id:string): Promise<void>{
+
+  await dockerContainerService.restart(
+    id
+  );
+
+}
+
+
+
+
+
+
+  async remove(id:string): Promise<void>{
+
+  await dockerContainerService.remove(
+    id
+  );
+
+}
+
+
+
+
+
+
+
+  async removeContainer(
+    name:string
   ){
 
-    const result =
-      await commandRunner.run({
-
-        command:"docker",
-
-        args:[
-          "port",
-          containerId,
-          "3000"
-        ],
-
-        cwd:process.cwd()
-
-      });
-
-
-
-    const match =
-      result.stdout.match(
-        /:(\d+)$/
-      );
-
-
-    if(!match)
-      throw new Error(
-        "Unable to detect port"
-      );
-
-
-    return Number(match[1]);
+    return dockerContainerService.remove(
+      name
+    );
 
   }
 
 
 
 
-  async stop(id:string){
-
-    await this.docker([
-      "stop",
-      id
-    ]);
-
-  }
-
-
-  async start(id:string){
-
-    await this.docker([
-      "start",
-      id
-    ]);
-
-  }
-
-
-
-  async restart(id:string){
-
-    await this.docker([
-      "restart",
-      id
-    ]);
-
-  }
-
-
-
-  async remove(id:string){
-
-    await this.docker([
-      "rm",
-      "-f",
-      id
-    ]);
-
-  }
-
-
-
-  async removeContainer(name:string){
-
-    await this.remove(name);
-
-  }
-
-
-
-
-  async inspect(id:string):Promise<ContainerInfo>{
-
-
-    const result =
-      await commandRunner.run({
-
-        command:"docker",
-
-        args:[
-          "inspect",
-          id
-        ],
-
-        cwd:process.cwd()
-
-      });
-
-
-
-    if(result.exitCode!==0)
-      throw new Error(
-        result.stderr
-      );
-
-
-
-    const data =
-      JSON.parse(result.stdout)[0];
-
-
-
-    return {
-
-      id:data.Id,
-
-      name:data.Name.replace("/",""),
-
-      image:data.Config.Image,
-
-      status:data.State.Status,
-
-      running:data.State.Running
-
-    };
-
-  }
 
 
 
@@ -548,42 +320,29 @@ async build(
     id:string
   ){
 
-    const result =
-      await commandRunner.run({
-
-        command:"docker",
-
-        args:[
-          "inspect",
-          id
-        ],
-
-        cwd:process.cwd()
-
-      });
-
-
-    return result.exitCode===0;
+    return dockerContainerService.exists(
+      id
+    );
 
   }
 
 
 
 
-  private async docker(
-    args:string[]
-  ){
 
-    await commandRunner.run({
 
-      command:"docker",
 
-      args,
+  async push(
+  deploymentId:string,
+  image:string,
+  tag:string
+): Promise<void>{
 
-      cwd:process.cwd()
+  await dockerImageService.push(
+    `${image}:${tag}`
+  );
 
-    });
+}
 
-  }
 
 }
