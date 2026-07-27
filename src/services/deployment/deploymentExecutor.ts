@@ -1,42 +1,55 @@
 import { config } from "@/lib/config";
+import { logger } from "@/lib/logger";
+import { withTimeout } from "@/lib/utils/timeout";
+
 import { DeploymentStatus } from "@/generated/prisma";
+
 import { deploymentRepository } from "@/repositories/deploymentRepository";
+
 import { DockerDeploymentProvider } from "@/services/providers";
-import { workspaceService } from "./workspace/workspaceService";
+
+import { proxyService } from "@/services/proxy/proxyService";
+
+import { deploymentLogService } from "./logs/deploymentLogService";
+import { deploymentCleanupService } from "./deploymentCleanupService";
 import { stageRunner } from "./stageRunner";
 import { DeploymentStage } from "./stages";
-import { deploymentLogService } from "./logs/deploymentLogService";
-import { withTimeout } from "@/lib/utils/timeout";
-import { proxyService } from "@/services/proxy/proxyService";
-import { deploymentCleanupService } from "./deploymentCleanupService";
-import { logger } from "@/lib/logger";
+import { workspaceService } from "./workspace/workspaceService";
 
 export const deploymentExecutor = {
   async execute(deploymentId: string): Promise<void> {
-    const deployment = await deploymentRepository.findById(deploymentId);
+    const deployment =
+      await deploymentRepository.findById(deploymentId);
 
     if (!deployment) {
       throw new Error("Deployment not found");
     }
 
+    if (!deployment.pipeline.repository) {
+      throw new Error("Deployment repository missing");
+    }
+
     const provider = new DockerDeploymentProvider();
-    const workspace = await workspaceService.prepare(deploymentId);
+
+    const workspace =
+      await workspaceService.prepare(deploymentId);
 
     let containerId: string | undefined;
 
     try {
+      //---------------------------------------------------------
+      // Previous deployment
+      //---------------------------------------------------------
+
       const previousDeployment =
         await deploymentRepository.findPreviousSuccessfulDeployment(
           deployment.projectId,
           deploymentId
         );
 
-      const { repository, branch, buildCommand, deployCommand } =
-        deployment.pipeline;
-
-      if (!repository) {
-        throw new Error("Deployment repository missing");
-      }
+      //---------------------------------------------------------
+      // Clone
+      //---------------------------------------------------------
 
       await stageRunner.run(
         deploymentId,
@@ -45,15 +58,19 @@ export const deploymentExecutor = {
           await withTimeout(
             provider.checkout(
               deploymentId,
-              repository,
+              deployment.pipeline.repository!,
               workspace,
-              branch ?? "main"
+              deployment.pipeline.branch ?? "main"
             ),
-            300000,
-            "Checkout timeout"
+            300_000,
+            "Repository checkout timed out"
           );
         }
       );
+
+      //---------------------------------------------------------
+      // Build
+      //---------------------------------------------------------
 
       await stageRunner.run(
         deploymentId,
@@ -63,47 +80,60 @@ export const deploymentExecutor = {
             provider.build(
               deploymentId,
               workspace,
-              buildCommand ?? undefined
+              deployment.pipeline.buildCommand ?? undefined
             ),
-            600000,
-            "Build timeout"
+            600_000,
+            "Application build timed out"
           );
         }
       );
+
+      //---------------------------------------------------------
+      // Deploy
+      //---------------------------------------------------------
 
       const image = process.env.DOCKER_IMAGE;
 
       if (!image) {
-        throw new Error("DOCKER_IMAGE missing");
+        throw new Error("DOCKER_IMAGE is not configured");
       }
 
-      const runtime = await stageRunner.run(
-        deploymentId,
-        DeploymentStage.DEPLOYING,
-        async () => {
-          const result = await withTimeout(
-            provider.deploy(
+      const runtime =
+        await stageRunner.run(
+          deploymentId,
+          DeploymentStage.DEPLOYING,
+          async () => {
+            const result =
+              await withTimeout(
+                provider.deploy(
+                  deploymentId,
+                  workspace,
+                  image,
+                  deploymentId,
+                  deployment.pipeline.deployCommand ?? undefined
+                ),
+                300_000,
+                "Container deployment timed out"
+              );
+
+            containerId = result.containerId;
+
+            await deploymentRepository.update(
               deploymentId,
-              workspace,
-              image,
-              deploymentId,
-              deployCommand ?? undefined
-            ),
-            300000,
-            "Deploy timeout"
-          );
+              {
+                containerId: result.containerId,
+                hostPort: result.hostPort,
+                containerUrl: result.containerUrl,
+              }
+            );
 
-          containerId = result.containerId;
+            return result;
+          }
+        );
 
-          await deploymentRepository.update(deploymentId, {
-            containerId: result.containerId,
-            hostPort: result.hostPort,
-            containerUrl: result.containerUrl,
-          });
-
-          return result;
-        }
-      );
+      //---------------------------------------------------------
+      // Verify
+      //---------------------------------------------------------
 
       await stageRunner.run(
         deploymentId,
@@ -111,7 +141,7 @@ export const deploymentExecutor = {
         async () => {
           await deploymentLogService.append(
             deploymentId,
-            "Container health verification started"
+            "Running deployment health verification..."
           );
 
           await proxyService.exposeDeployment(
@@ -119,10 +149,13 @@ export const deploymentExecutor = {
             runtime.containerName
           );
 
-          await deploymentRepository.update(deploymentId, {
-            status: DeploymentStatus.SUCCESS,
-            isHealthy: true,
-          });
+          await deploymentRepository.update(
+            deploymentId,
+            {
+              status: DeploymentStatus.SUCCESS,
+              isHealthy: true,
+            }
+          );
 
           await deploymentLogService.append(
             deploymentId,
@@ -137,24 +170,52 @@ export const deploymentExecutor = {
         }
       );
     } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : String(error);
+
+      const stack =
+        error instanceof Error
+          ? error.stack
+          : undefined;
+
+      //---------------------------------------------------------
+      // Console logging
+      //---------------------------------------------------------
+
       logger.error({
-        message:
-          error instanceof Error ? error.message : String(error),
-        stack:
-          error instanceof Error ? error.stack : undefined,
+        deploymentId,
+        containerId,
+        message,
+        stack,
       });
 
-      const message =
-        error instanceof Error ? error.message : String(error);
+      //---------------------------------------------------------
+      // Deployment log
+      //---------------------------------------------------------
 
       await deploymentLogService.append(
         deploymentId,
-        `Deployment failed: ${message}`
+        `Deployment failed:\n${message}`
       );
+
+      if (stack) {
+        await deploymentLogService.append(
+          deploymentId,
+          stack
+        );
+      }
+
+      //---------------------------------------------------------
+      // Cleanup exposed proxy
+      //---------------------------------------------------------
 
       if (containerId) {
         try {
-          await proxyService.removeDeployment(deploymentId);
+          await proxyService.removeDeployment(
+            deploymentId
+          );
         } catch (cleanupError) {
           logger.warn({
             deploymentId,
@@ -163,13 +224,24 @@ export const deploymentExecutor = {
         }
       }
 
-      await deploymentRepository.update(deploymentId, {
-        status: DeploymentStatus.FAILED,
-        isHealthy: false,
-      });
+      //---------------------------------------------------------
+      // Update database
+      //---------------------------------------------------------
+
+      await deploymentRepository.update(
+        deploymentId,
+        {
+          status: DeploymentStatus.FAILED,
+          isHealthy: false,
+        }
+      );
 
       throw error;
     } finally {
+      //---------------------------------------------------------
+      // Cleanup workspace
+      //---------------------------------------------------------
+
       await workspaceService.cleanup(deploymentId);
     }
   },
