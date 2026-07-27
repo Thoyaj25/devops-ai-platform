@@ -80,82 +80,74 @@ export class DockerDeploymentProvider implements DeploymentProvider {
   }
 
 
+async build(
+  deploymentId: string,
+  workspace: string,
+  command?: string
+): Promise<void> {
 
-  async build(
-    deploymentId:string,
-    workspace:string,
-    command?:string
-  ):Promise<void>{
+  const image = process.env.DOCKER_IMAGE;
 
+  if (!image) {
+    throw new Error("DOCKER_IMAGE missing");
+  }
 
-    const image =
-      process.env.DOCKER_IMAGE;
+  const tag = deploymentId;
 
+  const fullImage =
+    `${this.registry}/${image}:${tag}`;
 
-    if(!image)
-      throw new Error(
-        "DOCKER_IMAGE missing"
-      );
+  const buildCommand =
+    command ??
+    `docker build --progress=plain -t ${fullImage} .`;
 
+  await deploymentLogService.append(
+    deploymentId,
+    `Building ${fullImage}`
+  );
 
-    const tag =
-      deploymentId;
+  const result =
+    await commandRunner.run({
+      command: "sh",
+      args: [
+        "-c",
+        buildCommand
+      ],
+      cwd: workspace,
+      onStdout: data =>
+        deploymentLogService.append(
+          deploymentId,
+          data
+        ),
+      onStderr: data =>
+        deploymentLogService.append(
+          deploymentId,
+          data
+        )
+    });
 
+  if (result.exitCode !== 0) {
 
-    const fullImage =
-      `${this.registry}/${image}:${tag}`;
+    console.error(result.stdout);
 
+    console.error(result.stderr);
 
-
-    const buildCommand =
-      command ??
-      `docker build -t ${fullImage} .`;
-
-
-
-    await deploymentLogService.append(
-      deploymentId,
-      `Building ${fullImage}`
+    throw new Error(
+      [
+        "",
+        "Docker build failed.",
+        "",
+        "STDOUT:",
+        result.stdout,
+        "",
+        "STDERR:",
+        result.stderr
+      ].join("\n")
     );
 
-
-    const result =
-      await commandRunner.run({
-
-        command:"sh",
-
-        args:[
-          "-c",
-          buildCommand
-        ],
-
-        cwd:workspace,
-
-        onStdout:data=>
-          deploymentLogService.append(
-            deploymentId,
-            data
-          ),
-
-        onStderr:data=>
-          deploymentLogService.append(
-            deploymentId,
-            data
-          )
-
-      });
-
-
-    if(result.exitCode!==0){
-
-      throw new Error(
-        `Docker build failed ${result.stderr}`
-      );
-
-    }
-
-
   }
+
+}
 
 
 
