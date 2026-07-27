@@ -1,106 +1,173 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import "dotenv/config";
 
-import { authOptions } from "@/lib/auth/config";
-import { permissions } from "@/lib/auth/permissions";
-import { logger } from "@/lib/logger";
+import bcrypt from "bcrypt";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-import { deploymentService } from "@/services/deployment/deploymentService";
+import {
+  PrismaClient,
+  EnvironmentType,
+  UserRole,
+} from "@/generated/prisma";
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
+const connectionString = process.env.DATABASE_URL;
 
-    const environmentId = searchParams.get("environmentId");
-
-    if (!environmentId) {
-      return NextResponse.json(
-        {
-          error: "environmentId is required",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    const deployments =
-      await deploymentService.getEnvironmentDeployments(
-        environmentId
-      );
-
-    return NextResponse.json(deployments);
-  } catch (error) {
-    logger.error(
-      { error },
-      "Failed to fetch deployments"
-    );
-
-    return NextResponse.json(
-      {
-        error: "Failed to fetch deployments",
-      },
-      {
-        status: 500,
-      }
-    );
-  }
+if (!connectionString) {
+  throw new Error("DATABASE_URL environment variable is not set.");
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({
+    connectionString,
+  }),
+});
 
-    if (!session?.user?.id || !session?.user?.role) {
-      return NextResponse.json(
-        {
-          error: "Unauthorized",
-        },
-        {
-          status: 401,
-        }
-      );
-    }
+async function main() {
+  console.log("🌱 Seeding database...");
 
-    if (!permissions.canCreateDeployment(session.user.role)) {
-      return NextResponse.json(
-        {
-          error: "Forbidden",
-        },
-        {
-          status: 403,
-        }
-      );
-    }
+  const passwordHash = await bcrypt.hash("admin123", 10);
 
-    const body = await request.json();
+  // --------------------------------------------------
+  // Admin User
+  // --------------------------------------------------
 
-    // Creates deployment + deployment job
-    const deployment =
-      await deploymentService.initiateDeployment(
-        body,
-        session.user.id
-      );
+  const admin = await prisma.user.upsert({
+    where: {
+      email: "admin@marketsphere.local",
+    },
+    update: {
+      name: "Administrator",
+      passwordHash,
+      role: UserRole.ADMIN,
+    },
+    create: {
+      name: "Administrator",
+      email: "admin@marketsphere.local",
+      passwordHash,
+      role: UserRole.ADMIN,
+    },
+  });
 
-    return NextResponse.json(deployment, {
-      status: 201,
+  // --------------------------------------------------
+  // Cluster
+  // --------------------------------------------------
+
+  const cluster = await prisma.cluster.upsert({
+    where: {
+      id: "default-cluster",
+    },
+    update: {
+      name: "Local Docker Cluster",
+      provider: "Docker",
+      region: "Local",
+    },
+    create: {
+      id: "default-cluster",
+      name: "Local Docker Cluster",
+      provider: "Docker",
+      region: "Local",
+    },
+  });
+
+  // --------------------------------------------------
+  // Project
+  // --------------------------------------------------
+
+  const existingProject = await prisma.project.findFirst({
+    where: {
+      ownerId: admin.id,
+      name: "Demo Project",
+    },
+  });
+
+  const project =
+    existingProject ??
+    (await prisma.project.create({
+      data: {
+        name: "Demo Project",
+        description: "Default project",
+        ownerId: admin.id,
+        clusterId: cluster.id,
+      },
+    }));
+
+  // --------------------------------------------------
+  // Environments
+  // --------------------------------------------------
+
+  const environments = [
+    {
+      name: "Development",
+      type: EnvironmentType.DEVELOPMENT,
+    },
+    {
+      name: "Staging",
+      type: EnvironmentType.STAGING,
+    },
+    {
+      name: "Production",
+      type: EnvironmentType.PRODUCTION,
+    },
+  ];
+
+  for (const environment of environments) {
+    const exists = await prisma.environment.findFirst({
+      where: {
+        projectId: project.id,
+        name: environment.name,
+      },
     });
-  } catch (error) {
-    logger.error(
-      { error },
-      "Failed to create deployment"
-    );
 
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to create deployment",
-      },
-      {
-        status: 500,
-      }
-    );
+    if (!exists) {
+      await prisma.environment.create({
+        data: {
+          ...environment,
+          projectId: project.id,
+        },
+      });
+    }
   }
+
+  // --------------------------------------------------
+  // Pipeline
+  // --------------------------------------------------
+
+  const existingPipeline =
+    await prisma.pipeline.findFirst({
+      where: {
+        projectId: project.id,
+        name: "Default Pipeline",
+      },
+    });
+
+  if (!existingPipeline) {
+    await prisma.pipeline.create({
+      data: {
+        name: "Default Pipeline",
+        provider: "Docker",
+        repository: "",
+        branch: "main",
+        buildCommand: "npm install && npm run build",
+        deployCommand: "docker compose up -d",
+        projectId: project.id,
+      },
+    });
+  }
+
+  console.log("");
+  console.log("====================================");
+  console.log("✅ Database seeded successfully");
+  console.log("====================================");
+  console.log("Admin Email    : admin@marketsphere.local");
+  console.log("Admin Password : admin123");
+  console.log("====================================");
 }
+
+main()
+  .catch((error) => {
+    console.error("❌ Seed failed");
+    console.error(error);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

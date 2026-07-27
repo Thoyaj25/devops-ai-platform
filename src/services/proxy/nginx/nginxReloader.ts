@@ -1,4 +1,5 @@
 import { commandRunner } from "@/services/commandRunner/commandRunner";
+import { logger } from "@/lib/logger";
 
 class NginxReloader {
   async validate(): Promise<void> {
@@ -13,9 +14,17 @@ class NginxReloader {
       cwd: process.cwd(),
     });
 
+    // Log output for debugging visibility
+    if (result.stdout) {
+      logger.info({ message: "[NGINX TEST STDOUT]", output: result.stdout });
+    }
+    if (result.stderr) {
+      logger.info({ message: "[NGINX TEST STDERR]", output: result.stderr });
+    }
+
     if (result.exitCode !== 0) {
       throw new Error(
-        `Invalid nginx configuration:\n${result.stderr}`
+        `Invalid nginx configuration:\nSTDOUT:\n${result.stdout}\n\nSTDERR:\n${result.stderr}`
       );
     }
   }
@@ -33,9 +42,16 @@ class NginxReloader {
       cwd: process.cwd(),
     });
 
+    if (result.stdout) {
+      logger.info({ message: "[NGINX RELOAD STDOUT]", output: result.stdout });
+    }
+    if (result.stderr) {
+      logger.info({ message: "[NGINX RELOAD STDERR]", output: result.stderr });
+    }
+
     if (result.exitCode !== 0) {
       throw new Error(
-        `Failed to reload nginx:\n${result.stderr}`
+        `Failed to reload nginx:\nSTDOUT:\n${result.stdout}\n\nSTDERR:\n${result.stderr}`
       );
     }
   }
@@ -53,6 +69,7 @@ export async function reloadNginx(): Promise<void> {
 
 export const nginxReloader = {
   reload: reloadNginx,
+  validate: () => reloader.validate(),
 };
 
 export { NginxReloader };

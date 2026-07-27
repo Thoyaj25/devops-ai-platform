@@ -1,21 +1,21 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { deploymentControlService } from "@/services/deployment/deploymentControlService";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(
-  request: NextRequest,
-  context: {
-    params: Promise<{ id: string }>;
-  }
+  _: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Await the params to resolve the dynamic route ID
-    const { id } = await context.params;
+    const { id } = await params;
 
-    // Call the control service to stop the deployment
     const result = await deploymentControlService.stop(id);
 
     return NextResponse.json(result);
   } catch (error) {
+    console.error("Failed to stop deployment:", error);
+
     return NextResponse.json(
       {
         error:
@@ -23,9 +23,7 @@ export async function POST(
             ? error.message
             : "Failed to stop deployment",
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }

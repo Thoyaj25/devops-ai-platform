@@ -8,18 +8,15 @@ import { deploymentLogService } from "@/services/deployment/logs/deploymentLogSe
 import { deploymentRepository } from "@/repositories/deploymentRepository";
 import { projectService } from "@/services/project/projectService";
 
-
 const TERMINAL_STATES = [
   "SUCCESS",
   "FAILED",
   "SUPERSEDED",
+  "ROLLED_BACK",
 ] as const;
-
 
 type TerminalState =
   (typeof TERMINAL_STATES)[number];
-
-
 
 export async function GET(
   request: NextRequest,
@@ -31,55 +28,36 @@ export async function GET(
     }>;
   }
 ) {
-
   try {
-
     const session =
-      await getServerSession(
-        authOptions
-      );
-
+      await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-
       return NextResponse.json(
         {
           error: "Unauthorized",
         },
         {
-          status:401,
+          status: 401,
         }
       );
-
     }
 
-
-
-    const { id } =
-      await params;
-
-
+    const { id } = await params;
 
     const deployment =
-      await deploymentRepository.findById(
-        id
-      );
-
+      await deploymentRepository.findById(id);
 
     if (!deployment) {
-
       return NextResponse.json(
         {
-          error:"Deployment not found",
+          error: "Deployment not found",
         },
         {
-          status:404,
+          status: 404,
         }
       );
-
     }
-
-
 
     const hasAccess =
       await projectService.isUserAssociatedWithProject(
@@ -87,40 +65,32 @@ export async function GET(
         deployment.projectId
       );
 
-
     if (!hasAccess) {
-
       return NextResponse.json(
         {
-          error:"Forbidden",
+          error: "Forbidden",
         },
         {
-          status:403,
+          status: 403,
         }
       );
-
     }
-
-
 
     const encoder =
       new TextEncoder();
 
-
-
     const stream =
       new ReadableStream({
-
         start(controller) {
 
-
           let closed = false;
-
           let lastPayload = "";
 
           let interval:
-            NodeJS.Timeout | undefined;
+            NodeJS.Timeout | null = null;
 
+          let heartbeat:
+            NodeJS.Timeout | null = null;
 
 
           const close = () => {
@@ -129,29 +99,29 @@ export async function GET(
               return;
             }
 
-
             closed = true;
 
 
             if (interval) {
               clearInterval(interval);
+              interval = null;
+            }
+
+
+            if (heartbeat) {
+              clearInterval(heartbeat);
+              heartbeat = null;
             }
 
 
             try {
-
               controller.close();
-
             }
             catch {
-
-              // Already closed
-
+              // stream already closed
             }
 
           };
-
-
 
 
           const send = async () => {
@@ -161,77 +131,49 @@ export async function GET(
             }
 
 
-
             try {
 
               const current =
-                await deploymentRepository.findById(
-                  id
-                );
-
+                await deploymentRepository.findById(id);
 
 
               if (!current) {
-
                 close();
                 return;
-
               }
 
 
-
               const logs =
-                await deploymentLogService.getLogs(
-                  id
-                );
-
+                await deploymentLogService.getLogs(id);
 
 
               const payload = {
-
-                status:
-                  current.status,
-
-                logs:
-                  logs
-                    .map(
-                      (entry) =>
-                        entry.message
-                    )
-                    .join("\n"),
-
+                status: current.status,
+                logs: logs
+                  .map(
+                    (entry) =>
+                      entry.message
+                  )
+                  .join("\n"),
               };
-
 
 
               const signature =
                 JSON.stringify(payload);
 
 
+              if (signature !== lastPayload) {
 
-              if (
-                signature !== lastPayload
-              ) {
-
-                lastPayload =
-                  signature;
-
+                lastPayload = signature;
 
 
                 controller.enqueue(
-
                   encoder.encode(
-
-                    `data: ${JSON.stringify(
-                      payload
-                    )}\n\n`
-
+                    `data: ${JSON.stringify(payload)}\n\n`
                   )
-
                 );
 
               }
-
 
 
               if (
@@ -244,19 +186,16 @@ export async function GET(
 
               }
 
-
             }
             catch(error) {
-
 
               logger.error(
                 {
                   error,
-                  deploymentId:id,
+                  deploymentId: id,
                 },
                 "Deployment SSE polling failed"
               );
-
 
               close();
 
@@ -265,70 +204,55 @@ export async function GET(
           };
 
 
-
-
-          // Send immediately
+          // Initial event
           void send();
 
 
-
-          // Poll every second
+          // Poll deployment status/logs
           interval =
             setInterval(
               () => {
-
                 void send();
-
               },
               1000
             );
 
 
+          // Keep reverse proxies alive
+          heartbeat =
+            setInterval(
+              () => {
 
-          // Keep proxies alive
-          const heartbeat =
-            setInterval(() => {
+                if (!closed) {
 
-              if (!closed) {
+                  controller.enqueue(
+                    encoder.encode(
+                      ": heartbeat\n\n"
+                    )
+                  );
 
-                controller.enqueue(
-                  encoder.encode(
-                    ": heartbeat\n\n"
-                  )
-                );
+                }
 
-              }
-
-            },15000);
-
+              },
+              15000
+            );
 
 
           request.signal.addEventListener(
             "abort",
             () => {
-
-              clearInterval(
-                heartbeat
-              );
-
               close();
-
             }
           );
 
-
         },
-
       });
-
 
 
     return new Response(
       stream,
       {
-
         headers: {
-
           "Content-Type":
             "text/event-stream",
 
@@ -340,16 +264,12 @@ export async function GET(
 
           "X-Accel-Buffering":
             "no",
-
         },
-
       }
     );
 
-
   }
   catch(error) {
-
 
     logger.error(
       {
@@ -365,10 +285,9 @@ export async function GET(
           "Failed to stream logs",
       },
       {
-        status:500,
+        status: 500,
       }
     );
 
   }
-
 }

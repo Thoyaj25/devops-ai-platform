@@ -14,7 +14,7 @@ type RouteContext = {
   }>;
 };
 
-export async function POST(
+export async function DELETE(
   request: Request,
   { params }: RouteContext
 ) {

@@ -94,4 +94,11 @@ export interface DeploymentProvider {
   inspect(
     containerId: string
   ): Promise<ContainerInfo>;
+
+  /**
+   * Check whether a container exists without throwing on missing containers
+   */
+  containerExists(
+    containerId: string
+  ): Promise<boolean>;
 }

@@ -565,4 +565,21 @@ export class DockerDeploymentProvider implements DeploymentProvider {
     };
   }
 
+
+  async containerExists(
+    containerId:string
+  ):Promise<boolean>{
+    const result =
+      await commandRunner.run({
+        command:"docker",
+        args:[
+          "inspect",
+          containerId,
+        ],
+        cwd:process.cwd()
+      });
+
+    return result.exitCode === 0;
+  }
+
 }
