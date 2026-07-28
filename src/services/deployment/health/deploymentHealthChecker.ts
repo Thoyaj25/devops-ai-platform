@@ -1,48 +1,44 @@
 import { commandRunner } from "@/services/commandRunner/commandRunner";
 
+const sleep = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 export class DeploymentHealthChecker {
+  async check(containerName: string): Promise<boolean> {
+    const maxAttempts = 30;
+    const delayMs = 1000;
+    const url = `http://${containerName}:3000/api/health`;
 
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const response = await fetch(url);
 
-  async check(
-    containerName:string
-  ){
+        if (response.ok) {
+          console.log(
+            `[HealthCheck] ${containerName} is healthy after ${attempt} attempt(s).`
+          );
+          return true;
+        }
 
-    const result =
-      await commandRunner.run({
+        console.log(
+          `[HealthCheck] Attempt ${attempt}: HTTP ${response.status}`
+        );
+      } catch (error) {
+        console.log(
+          `[HealthCheck] Attempt ${attempt}: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
 
-        command:"docker",
-
-        args:[
-          "exec",
-          containerName,
-          "wget",
-          "-qO-",
-          "http://127.0.0.1:3000/api/health"
-        ],
-
-        cwd:process.cwd()
-
-      });
-
-
-
-    if(result.exitCode !== 0){
-
-      throw new Error(
-        `Health check failed:
-        ${result.stderr}`
-      );
-
+      await sleep(delayMs);
     }
 
-
-    return true;
-
+    throw new Error(
+      `Deployment '${containerName}' failed health checks after ${maxAttempts} attempts.`
+    );
   }
-
 }
 
-
 export const deploymentHealthChecker =
- new DeploymentHealthChecker();
+  new DeploymentHealthChecker();
