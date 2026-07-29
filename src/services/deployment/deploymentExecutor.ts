@@ -14,6 +14,7 @@ import { deploymentLogService } from "./logs/deploymentLogService";
 import { stageRunner } from "./stageRunner";
 import { DeploymentStage } from "./stages";
 import { workspaceService } from "./workspace/workspaceService";
+import { deploymentRollbackService } from "./deploymentRollbackService";
 
 export const deploymentExecutor = {
   async execute(deploymentId: string): Promise<void> {
@@ -189,16 +190,17 @@ export const deploymentExecutor = {
         );
       }
 
-      if (containerId) {
-        try {
-          await proxyService.removeDeployment(deploymentId);
-        } catch (cleanupError) {
-          logger.warn({
-            deploymentId,
-            cleanupError,
-          });
-        }
-      }
+      try {
+  await deploymentRollbackService.rollback(
+    deploymentId,
+    containerId
+  );
+} catch (rollbackError) {
+  logger.warn({
+    deploymentId,
+    rollbackError,
+  });
+}
 
       await deploymentRepository.update(deploymentId, {
         status: DeploymentStatus.FAILED,

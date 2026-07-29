@@ -6,8 +6,7 @@ import { deploymentLogService } from "./logs/deploymentLogService";
 import { removeNginxConfig } from "@/services/proxy/nginx/nginxConfigRemover";
 
 
-const provider =
-  new DockerDeploymentProvider();
+const provider = new DockerDeploymentProvider();
 
 
 const RETAIN_SUCCESSFUL_DEPLOYMENTS = 2;
@@ -15,17 +14,29 @@ const RETAIN_SUCCESSFUL_DEPLOYMENTS = 2;
 
 export const deploymentCleanupService = {
 
-
   async cleanupPreviousDeployment(
     deploymentId: string
   ): Promise<void> {
 
-
     try {
 
+      const currentDeployment =
+  await deploymentRepository.findById(
+    deploymentId
+  );
 
-      const deployments =
-        await deploymentRepository.findSuccessfulDeployments();
+if (!currentDeployment) {
+  console.warn(
+    "[Cleanup] Deployment not found",
+    { deploymentId }
+  );
+  return;
+}
+
+const deployments =
+  await deploymentRepository.findSuccessfulDeployments(
+    currentDeployment.projectId
+  );
 
 
       const oldDeployments =
@@ -34,9 +45,7 @@ export const deploymentCleanupService = {
             deployment =>
               deployment.id !== deploymentId
           )
-          .slice(
-            RETAIN_SUCCESSFUL_DEPLOYMENTS - 1
-          );
+          .slice(RETAIN_SUCCESSFUL_DEPLOYMENTS - 1);
 
 
 
@@ -53,33 +62,55 @@ export const deploymentCleanupService = {
 
       for (const deployment of oldDeployments) {
 
+        console.info(
+          "[Cleanup] Starting cleanup",
+          {
+            deploymentId: deployment.id,
+            containerId: deployment.containerId
+          }
+        );
+
 
         try {
 
 
-          console.info(
-            "[Cleanup] Removing old deployment",
+          //
+          // 1. Mark DB state first
+          //
+          await deploymentRepository.update(
+            deployment.id,
             {
-              deploymentId: deployment.id,
-              containerId:
-                deployment.containerId
+              status: DeploymentStatus.SUPERSEDED,
+              isHealthy: false,
             }
           );
 
 
+          //
+          // 2. Remove nginx routing
+          //
+          try {
 
-          if (deployment.containerId) {
-
-            await provider.remove(
-              deployment.containerId
+            await removeNginxConfig(
+              deployment.id
             );
 
 
             console.info(
-              "[Cleanup] Container removed",
+              "[Cleanup] Nginx config removed",
               {
-                containerId:
-                  deployment.containerId
+                deploymentId: deployment.id
+              }
+            );
+
+
+          } catch(error) {
+
+            console.error(
+              "[Cleanup] Failed removing nginx config",
+              {
+                deploymentId: deployment.id,
+                error
               }
             );
 
@@ -87,25 +118,53 @@ export const deploymentCleanupService = {
 
 
 
-          await removeNginxConfig(
-            deployment.id
-          );
+          //
+          // 3. Remove container
+          //
+          if (deployment.containerId) {
+
+            try {
+
+              await provider.remove(
+                deployment.containerId
+              );
+
+
+              console.info(
+                "[Cleanup] Container removed",
+                {
+                  containerId:
+                    deployment.containerId
+                }
+              );
+
+
+            } catch(error) {
+
+              console.error(
+                "[Cleanup] Container removal failed",
+                {
+                  containerId:
+                    deployment.containerId,
+                  error
+                }
+              );
+
+            }
+
+          }
 
 
 
+          //
+          // 4. Clear runtime metadata
+          //
           await deploymentRepository.update(
             deployment.id,
             {
-              status:
-                DeploymentStatus.SUPERSEDED,
-
               containerId: null,
-
               hostPort: null,
-
               containerUrl: null,
-
-              isHealthy: false,
             }
           );
 
@@ -117,30 +176,37 @@ export const deploymentCleanupService = {
           );
 
 
-
           console.info(
-            `[Cleanup] Deployment ${deployment.id} removed.`
+            "[Cleanup] Completed",
+            {
+              deploymentId: deployment.id
+            }
           );
 
 
-        }
-        catch(error) {
+        } catch(error) {
 
 
           console.error(
-            `[Cleanup] Failed cleaning deployment ${deployment.id}`,
-            error
+            "[Cleanup] Failed cleaning deployment",
+            {
+              deploymentId: deployment.id,
+              error
+            }
           );
 
 
-          // Continue cleaning remaining deployments
+          //
+          // Continue next deployment
+          //
+          continue;
+
         }
 
       }
 
 
-    }
-    catch(error) {
+    } catch(error) {
 
 
       console.error(
@@ -149,11 +215,11 @@ export const deploymentCleanupService = {
       );
 
 
-      // Cleanup failure should never fail deployment
-
+      //
+      // Cleanup should never fail deployment
+      //
     }
 
   },
-
 
 };

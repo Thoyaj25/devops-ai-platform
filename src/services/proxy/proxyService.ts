@@ -3,6 +3,7 @@ import { deploymentLogService } from "@/services/deployment/logs/deploymentLogSe
 import { generateNginxConfig } from "./nginx/nginxConfigGenerator";
 import { removeNginxConfig } from "./nginx/nginxConfigRemover";
 import { nginxReloader } from "./nginx/nginxReloader";
+import { verifyDeploymentRoute } from "./nginx/nginxSmokeTester";
 
 export const proxyService = {
   async exposeDeployment(
@@ -17,12 +18,14 @@ export const proxyService = {
       throw new Error("Container name is required");
     }
 
-    const hostname =
-      `${deploymentId}.${config.deploymentDomain}`;
+    const hostname = `${deploymentId}.${config.deploymentDomain}`;
 
+    //
+    // Generate nginx configuration
+    //
     await deploymentLogService.append(
       deploymentId,
-      `Generating nginx config for ${hostname}`
+      `Generating nginx configuration for ${hostname}`
     );
 
     await generateNginxConfig(
@@ -31,16 +34,31 @@ export const proxyService = {
       hostname
     );
 
+    //
+    // Validate and reload nginx
+    //
     await deploymentLogService.append(
       deploymentId,
-      "Reloading nginx"
+      "Reloading nginx configuration"
     );
 
     await nginxReloader.reload();
 
+    //
+    // Verify routing through nginx.
+    // verifyDeploymentRoute() is responsible for retrying until
+    // nginx is actually serving the deployment.
+    //
     await deploymentLogService.append(
       deploymentId,
-      "Nginx configuration applied successfully"
+      "Verifying deployment route"
+    );
+
+    await verifyDeploymentRoute(deploymentId);
+
+    await deploymentLogService.append(
+      deploymentId,
+      `Deployment successfully exposed at http://${hostname}`
     );
   },
 
@@ -51,8 +69,23 @@ export const proxyService = {
       throw new Error("Deployment ID is required");
     }
 
+    await deploymentLogService.append(
+      deploymentId,
+      "Removing nginx configuration"
+    );
+
     await removeNginxConfig(deploymentId);
 
+    await deploymentLogService.append(
+      deploymentId,
+      "Reloading nginx configuration"
+    );
+
     await nginxReloader.reload();
+
+    await deploymentLogService.append(
+      deploymentId,
+      "Deployment route removed successfully"
+    );
   },
 };
