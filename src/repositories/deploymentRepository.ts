@@ -197,48 +197,53 @@ export const deploymentRepository = {
    * Used for cleanup and reconciliation
    */
   findSuccessfulDeployments(
-  projectId: string
-) {
+    projectId?:string
+  ) {
 
-  return prisma.deployment.findMany({
+    return prisma.deployment.findMany({
 
-    where: {
+      where:{
 
-      projectId,
+        ...(projectId && {
+          projectId,
+        }),
 
-      status: DeploymentStatus.SUCCESS,
+        status:
+          DeploymentStatus.SUCCESS,
 
-      containerId: {
-        not: null,
+        containerId:{
+          not:null,
+        },
+
       },
 
-    },
 
-    orderBy: {
-      createdAt: "desc",
-    },
+      orderBy:{
+        createdAt:"desc",
+      },
 
-    select: {
 
-      id: true,
+      select:{
 
-      projectId: true,
+        id:true,
 
-      containerId: true,
+        projectId:true,
 
-      hostPort: true,
+        containerId:true,
 
-      containerUrl: true,
+        hostPort:true,
 
-      isHealthy: true,
+        containerUrl:true,
 
-      createdAt: true,
+        isHealthy:true,
 
-    },
+        createdAt:true,
 
-  });
+      },
 
-},
+    });
+
+  },
 
 
   /**

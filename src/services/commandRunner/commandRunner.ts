@@ -81,7 +81,6 @@ export const commandRunner = {
 
               shell:false,
 
-              detached:true,
             }
           );
 

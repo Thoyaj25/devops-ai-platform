@@ -1,5 +1,4 @@
-import { deploymentLogService } 
-from "@/services/deployment/logs/deploymentLogService";
+import { deploymentLogService } from "@/services/deployment/logs/deploymentLogService";
 
 import {
   DeploymentProvider,
@@ -7,22 +6,15 @@ import {
   ContainerInfo,
 } from "./deploymentProvider";
 
-import { dockerClient } 
-from "@/services/docker/dockerClient";
+import { dockerClient } from "@/services/docker/dockerClient";
+import { dockerContainerService } from "@/services/docker/dockerContainerService";
+import { dockerImageService } from "@/services/docker/dockerImageService";
 
-import { dockerContainerService }
-from "@/services/docker/dockerContainerService";
-
-import { dockerImageService }
-from "@/services/docker/dockerImageService";
-
-import { deploymentHealthChecker }
-from "@/services/deployment/health/deploymentHealthChecker";
-
+import { deploymentHealthChecker } from "@/services/deployment/health/deploymentHealthChecker";
 
 
 export class DockerDeploymentProvider
-implements DeploymentProvider {
+  implements DeploymentProvider {
 
 
   private domain =
@@ -31,10 +23,10 @@ implements DeploymentProvider {
 
 
 
-  private log(
-    deploymentId:string,
-    message:string
-  ){
+  private async log(
+    deploymentId: string,
+    message: string
+  ) {
 
     return deploymentLogService.append(
       deploymentId,
@@ -45,19 +37,17 @@ implements DeploymentProvider {
 
 
 
-
-
   async checkout(
-    deploymentId:string,
-    repository:string,
-    workspace:string,
-    branch="main"
-  ){
+    deploymentId: string,
+    repository: string,
+    workspace: string,
+    branch = "main"
+  ) {
 
 
     await this.log(
       deploymentId,
-      `Cloning ${repository}`
+      `Cloning repository ${repository}`
     );
 
 
@@ -75,7 +65,7 @@ implements DeploymentProvider {
 
     await this.log(
       deploymentId,
-      "Repository cloned"
+      "Repository checkout completed"
     );
 
   }
@@ -83,22 +73,21 @@ implements DeploymentProvider {
 
 
 
-
-
   async build(
-    deploymentId:string,
-    workspace:string
-  ){
+    deploymentId: string,
+    workspace: string
+  ) {
 
 
     const image =
       process.env.DOCKER_IMAGE;
 
 
-    if(!image)
+    if (!image) {
       throw new Error(
-        "DOCKER_IMAGE missing"
+        "DOCKER_IMAGE environment variable missing"
       );
+    }
 
 
 
@@ -109,7 +98,7 @@ implements DeploymentProvider {
 
     await this.log(
       deploymentId,
-      `Building ${tag}`
+      `Building docker image ${tag}`
     );
 
 
@@ -123,7 +112,7 @@ implements DeploymentProvider {
 
     await this.log(
       deploymentId,
-      "Image build completed"
+      "Docker image build completed"
     );
 
   }
@@ -132,15 +121,12 @@ implements DeploymentProvider {
 
 
 
-
-
   async deploy(
-    deploymentId:string,
-    workspace:string,
-    image:string,
-    tag:string
-  ):Promise<DeployResult>{
-
+    deploymentId: string,
+    workspace: string,
+    image: string,
+    tag: string
+  ): Promise<DeployResult> {
 
 
     const fullImage =
@@ -153,6 +139,12 @@ implements DeploymentProvider {
 
 
 
+    await this.log(
+      deploymentId,
+      `Creating container ${containerName}`
+    );
+
+
 
     await dockerContainerService.remove(
       containerName
@@ -160,21 +152,16 @@ implements DeploymentProvider {
 
 
 
-
-
     const containerId =
       await dockerContainerService.run({
 
-        name:containerName,
+        name: containerName,
 
-        image:fullImage,
+        image: fullImage,
 
-        network:
-        "marketsphere"
+        network: "marketsphere",
 
       });
-
-
 
 
 
@@ -184,14 +171,9 @@ implements DeploymentProvider {
 
 
 
-
-
     await deploymentHealthChecker.check(
       containerName
     );
-
-
-
 
 
 
@@ -200,14 +182,10 @@ implements DeploymentProvider {
 
 
 
-
-
     await this.log(
       deploymentId,
-      `Deployment ready ${containerUrl}`
+      `Deployment healthy ${containerUrl}`
     );
-
-
 
 
 
@@ -217,12 +195,11 @@ implements DeploymentProvider {
 
       containerName,
 
-      hostPort:3000,
+      hostPort: 3000,
 
-      containerUrl
+      containerUrl,
 
     };
-
 
   }
 
@@ -230,11 +207,9 @@ implements DeploymentProvider {
 
 
 
-
-
   async inspect(
-    id:string
-  ):Promise<ContainerInfo>{
+    id: string
+  ): Promise<ContainerInfo> {
 
 
     return dockerContainerService.inspect(
@@ -247,78 +222,9 @@ implements DeploymentProvider {
 
 
 
-
-
-  async stop(id:string): Promise<void>{
-
-  await dockerContainerService.stop(
-    id
-  );
-
-}
-
-
-
-
-
-  async start(id:string): Promise<void>{
-
-  await dockerContainerService.start(
-    id
-  );
-
-}
-
-
-
-
-
-  async restart(id:string): Promise<void>{
-
-  await dockerContainerService.restart(
-    id
-  );
-
-}
-
-
-
-
-
-
-  async remove(id:string): Promise<void>{
-
-  await dockerContainerService.remove(
-    id
-  );
-
-}
-
-
-
-
-
-
-
-  async removeContainer(
-    name:string
-  ){
-
-    return dockerContainerService.remove(
-      name
-    );
-
-  }
-
-
-
-
-
-
-
-  async containerExists(
-    id:string
-  ){
+  async exists(
+    id: string
+  ): Promise<boolean> {
 
     return dockerContainerService.exists(
       id
@@ -330,19 +236,117 @@ implements DeploymentProvider {
 
 
 
+  async containerExists(
+    id: string
+  ): Promise<boolean> {
+
+    return this.exists(id);
+
+  }
+
+
+
+
+
+  async stop(
+    id: string
+  ): Promise<void> {
+
+
+    await dockerContainerService.stop(
+      id
+    );
+
+  }
+
+
+
+
+
+  async start(
+    id: string
+  ): Promise<void> {
+
+
+    await dockerContainerService.start(
+      id
+    );
+
+  }
+
+
+
+
+
+  async restart(
+    id: string
+  ): Promise<void> {
+
+
+    await dockerContainerService.restart(
+      id
+    );
+
+  }
+
+
+
+
+
+  async remove(
+    id: string
+  ): Promise<void> {
+
+
+    await dockerContainerService.remove(
+      id
+    );
+
+  }
+
+
+
+
+
+  async removeContainer(
+    name: string
+  ): Promise<void> {
+
+
+    await dockerContainerService.remove(
+      name
+    );
+
+  }
+
+
+
 
 
   async push(
-  deploymentId:string,
-  image:string,
-  tag:string
-): Promise<void>{
+    deploymentId: string,
+    image: string,
+    tag: string
+  ): Promise<void> {
 
-  await dockerImageService.push(
-    `${image}:${tag}`
-  );
 
-}
+    await this.log(
+      deploymentId,
+      `Pushing image ${image}:${tag}`
+    );
+
+
+    await dockerImageService.push(
+      `${image}:${tag}`
+    );
+
+
+    await this.log(
+      deploymentId,
+      "Image push completed"
+    );
+
+  }
 
 
 }

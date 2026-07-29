@@ -62,6 +62,21 @@ export const proxyService = {
     );
   },
 
+  async verifyDeployment(
+    deploymentId: string
+  ): Promise<void> {
+    if (!deploymentId) {
+      throw new Error("Deployment ID is required");
+    }
+
+    await deploymentLogService.append(
+      deploymentId,
+      "Verifying deployment route"
+    );
+
+    await verifyDeploymentRoute(deploymentId);
+  },
+
   async removeDeployment(
     deploymentId: string
   ): Promise<void> {

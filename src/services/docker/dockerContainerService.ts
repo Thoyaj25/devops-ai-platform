@@ -1,189 +1,180 @@
-import { dockerClient } 
-from "./dockerClient";
-
+import { dockerClient } from "./dockerClient";
 
 export const dockerContainerService = {
 
+  async run(options: {
+    name: string;
+    image: string;
+    network: string;
+  }) {
 
- async run(options:{
-  name:string;
-  image:string;
-  network:string;
- }){
+    const result = await dockerClient.run(
+      "docker",
+      [
+        "run",
+        "-d",
 
+        "--name",
+        options.name,
 
- const result =
- await dockerClient.run(
- "docker",
- [
-  "run",
-  "-d",
+        "--network",
+        options.network,
 
-  "--name",
-  options.name,
+        "--network-alias",
+        options.name,
 
-  "--network",
-  options.network,
+        "--restart",
+        "unless-stopped",
 
-  "--network-alias",
-  options.name,
+        "-e",
+        "HOSTNAME=0.0.0.0",
 
-  "--restart",
-  "unless-stopped",
+        options.image,
+      ]
+    );
 
-  "-e",
-  "HOSTNAME=0.0.0.0",
+    if (result.exitCode !== 0) {
+      throw new Error(result.stderr);
+    }
 
-  options.image
- ]
- );
+    return result.stdout.trim();
+  },
 
 
- if(result.exitCode!==0)
-  throw new Error(result.stderr);
 
+  async remove(id: string) {
 
+    const result = await dockerClient.run(
+      "docker",
+      [
+        "rm",
+        "-f",
+        id,
+      ]
+    );
 
- return result.stdout.trim();
+    if (result.exitCode !== 0) {
+      throw new Error(result.stderr);
+    }
 
- },
+  },
 
 
 
- async remove(name:string){
+  async stop(id: string) {
 
- await dockerClient.run(
- "docker",
- [
-  "rm",
-  "-f",
-  name
- ]
- );
+    const result = await dockerClient.run(
+      "docker",
+      [
+        "stop",
+        id,
+      ]
+    );
 
- },
+    if (result.exitCode !== 0) {
+      throw new Error(result.stderr);
+    }
 
+  },
 
 
- async stop(id:string){
 
- return dockerClient.run(
- "docker",
- [
-  "stop",
-  id
- ]
- );
+  async start(id: string) {
 
- },
+    const result = await dockerClient.run(
+      "docker",
+      [
+        "start",
+        id,
+      ]
+    );
 
+    if (result.exitCode !== 0) {
+      throw new Error(result.stderr);
+    }
 
+  },
 
- async start(id:string){
 
- return dockerClient.run(
- "docker",
- [
-  "start",
-  id
- ]
- );
 
- },
+  async restart(id: string) {
 
+    const result = await dockerClient.run(
+      "docker",
+      [
+        "restart",
+        id,
+      ]
+    );
 
+    if (result.exitCode !== 0) {
+      throw new Error(result.stderr);
+    }
 
- async restart(id:string){
+  },
 
- return dockerClient.run(
- "docker",
- [
-  "restart",
-  id
- ]
- );
 
- },
 
+  async inspect(id: string) {
 
+    const result = await dockerClient.run(
+      "docker",
+      [
+        "inspect",
+        id,
+      ]
+    );
 
- async inspect(id:string){
+    if (result.exitCode !== 0) {
+      throw new Error(result.stderr);
+    }
 
- const result =
- await dockerClient.run(
- "docker",
- [
-  "inspect",
-  id
- ]
- );
+    const data = JSON.parse(result.stdout)[0];
 
+    return {
+      id: data.Id,
+      name: data.Name.replace("/", ""),
+      image: data.Config.Image,
+      status: data.State.Status,
+      running: data.State.Running,
+    };
 
- const data =
- JSON.parse(result.stdout)[0];
+  },
 
 
- return {
 
- id:data.Id,
+  async exists(id: string): Promise<boolean> {
 
- name:data.Name.replace("/",""),
+    const result = await dockerClient.run(
+      "docker",
+      [
+        "inspect",
+        id,
+      ]
+    );
 
- image:data.Config.Image,
+    return result.exitCode === 0;
 
- status:data.State.Status,
+  },
 
- running:data.State.Running
 
- };
 
+  async waitRunning(id: string) {
 
- },
+    for (let i = 0; i < 30; i++) {
 
+      const info = await this.inspect(id);
 
+      if (info.running) {
+        return;
+      }
 
- async exists(id:string){
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
- const result =
- await dockerClient.run(
- "docker",
- [
-  "inspect",
-  id
- ]
- );
+    }
 
+    throw new Error("Container failed to reach running state");
 
- return result.exitCode===0;
-
- },
-
-
-
- async waitRunning(id:string){
-
- for(let i=0;i<30;i++){
-
-  const info =
-  await this.inspect(id);
-
-
-  if(info.running)
-    return;
-
-
-  await new Promise(
-   r=>setTimeout(r,1000)
-  );
-
- }
-
-
- throw new Error(
-  "Container failed"
- );
-
- }
-
+  },
 
 };

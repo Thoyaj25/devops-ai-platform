@@ -1,6 +1,6 @@
 import { DeploymentStatus } from "@/generated/prisma";
-import { logger } from "@/lib/logger";
 
+import { logger } from "@/lib/logger";
 import { deploymentRepository } from "@/repositories/deploymentRepository";
 
 import { DockerDeploymentProvider } from "@/services/providers";
@@ -19,28 +19,35 @@ export const rollbackService = {
     const provider = new DockerDeploymentProvider();
 
 
-    const current =
+    //
+    // Load deployments
+    //
+
+    const currentDeployment =
       await deploymentRepository.findById(deploymentId);
 
 
-    const previous =
-      await deploymentRepository.findById(previousDeploymentId);
-
-
-
-    if (!current) {
+    if (!currentDeployment) {
       throw new Error("Current deployment not found");
     }
 
 
-    if (!previous) {
+    const previousDeployment =
+      await deploymentRepository.findById(previousDeploymentId);
+
+
+    if (!previousDeployment) {
       throw new Error("Previous deployment not found");
     }
 
 
+    //
+    // Validate same project
+    //
 
     if (
-      current.projectId !== previous.projectId
+      currentDeployment.projectId !==
+      previousDeployment.projectId
     ) {
       throw new Error(
         "Deployments belong to different projects"
@@ -48,10 +55,46 @@ export const rollbackService = {
     }
 
 
+    //
+    // Validate rollback source
+    //
 
-    if (!previous.containerId) {
+    const rollbackAllowedStatuses: DeploymentStatus[] = [
+      DeploymentStatus.SUCCESS,
+      DeploymentStatus.FAILED,
+      DeploymentStatus.DEPLOYING,
+      DeploymentStatus.HEALTH_CHECKING,
+    ];
+
+
+    if (
+      !rollbackAllowedStatuses.includes(
+        currentDeployment.status
+      )
+    ) {
+      throw new Error(
+        `Deployment ${deploymentId} cannot be rolled back from ${currentDeployment.status}`
+      );
+    }
+
+
+    //
+    // Validate rollback target
+    //
+
+    if (!previousDeployment.containerId) {
       throw new Error(
         "Previous deployment has no container"
+      );
+    }
+
+
+    if (
+      previousDeployment.status !== DeploymentStatus.SUCCESS &&
+      previousDeployment.status !== DeploymentStatus.SUPERSEDED
+    ) {
+      throw new Error(
+        `Previous deployment status ${previousDeployment.status} is not usable`
       );
     }
 
@@ -61,15 +104,14 @@ export const rollbackService = {
       deploymentId,
       {
         status: DeploymentStatus.ROLLING_BACK,
-        isHealthy:false
+        isHealthy: false,
       }
     );
 
 
-
     await deploymentLogService.append(
       deploymentId,
-      `Rollback started -> ${previousDeploymentId}`
+      `Rollback started. Restoring ${previousDeploymentId}`
     );
 
 
@@ -83,13 +125,13 @@ export const rollbackService = {
 
       const exists =
         await provider.exists(
-          previous.containerId
+          previousDeployment.containerId
         );
 
 
       if (!exists) {
         throw new Error(
-          "Previous container does not exist"
+          "Previous deployment container does not exist"
         );
       }
 
@@ -99,27 +141,34 @@ export const rollbackService = {
       // Start previous container
       //
 
+      await deploymentLogService.append(
+        deploymentId,
+        "Starting previous container"
+      );
+
+
       await provider.start(
-        previous.containerId
+        previousDeployment.containerId
       );
 
 
 
+      //
+      // Verify container
+      //
+
       const inspect =
         await provider.inspect(
-          previous.containerId
+          previousDeployment.containerId
         );
-
 
 
       if (
         inspect.status !== "running"
       ) {
-
         throw new Error(
           "Previous container is not running"
         );
-
       }
 
 
@@ -128,12 +177,27 @@ export const rollbackService = {
       // Switch nginx traffic
       //
 
+      await deploymentLogService.append(
+        deploymentId,
+        "Switching nginx traffic"
+      );
+
+
       await proxyService.exposeDeployment(
         previousDeploymentId,
         `dep-${previousDeploymentId}`
       );
 
 
+      await proxyService.verifyDeployment(
+        previousDeploymentId
+      );
+
+
+
+      //
+      // Remove failed deployment route
+      //
 
       await proxyService.removeDeployment(
         deploymentId
@@ -142,24 +206,23 @@ export const rollbackService = {
 
 
       //
-      // Update database
+      // Update deployment states
       //
 
       await deploymentRepository.update(
         previousDeploymentId,
         {
           status: DeploymentStatus.SUCCESS,
-          isHealthy:true
+          isHealthy: true,
         }
       );
-
 
 
       await deploymentRepository.update(
         deploymentId,
         {
           status: DeploymentStatus.ROLLED_BACK,
-          isHealthy:false
+          isHealthy: false,
         }
       );
 
@@ -176,32 +239,42 @@ export const rollbackService = {
       // Cleanup old container
       //
 
-      if(current.containerId){
+      if (
+        currentDeployment.containerId
+      ) {
 
         await this.cleanupContainer(
           provider,
-          current.containerId
+          currentDeployment.containerId
         );
 
       }
 
 
 
+      logger.info(
+        {
+          deploymentId,
+          previousDeploymentId,
+        },
+        "Rollback completed"
+      );
+
+
       return {
         success:true,
-        rolledBackTo:previousDeploymentId
+        rolledBackTo: previousDeploymentId,
       };
 
 
-
-    } catch(error){
+    } catch(error) {
 
 
       await deploymentRepository.update(
         deploymentId,
         {
-          status:DeploymentStatus.FAILED,
-          isHealthy:false
+          status: DeploymentStatus.FAILED,
+          isHealthy:false,
         }
       );
 
@@ -210,8 +283,8 @@ export const rollbackService = {
         deploymentId,
         `Rollback failed: ${
           error instanceof Error
-          ? error.message
-          : String(error)
+            ? error.message
+            : String(error)
         }`
       );
 
@@ -220,14 +293,13 @@ export const rollbackService = {
         {
           error,
           deploymentId,
-          previousDeploymentId
+          previousDeploymentId,
         },
         "Rollback failed"
       );
 
 
       throw error;
-
     }
 
   },
@@ -235,50 +307,45 @@ export const rollbackService = {
 
 
   async cleanupContainer(
-    provider:DockerDeploymentProvider,
+    provider: DockerDeploymentProvider,
     containerId:string
-  ){
+  ) {
 
-    try{
+
+    try {
 
       await provider.stop(
         containerId
       );
 
 
-    }catch(error){
-
-      logger.warn(
-        {
-          error,
-          containerId
-        },
-        "Container stop failed"
-      );
-
-    }
-
-
-
-    try{
-
       await provider.remove(
         containerId
       );
 
 
-    }catch(error){
+      logger.info(
+        {
+          containerId,
+        },
+        "Old container removed"
+      );
+
+
+    } catch(error) {
+
 
       logger.warn(
         {
           error,
-          containerId
+          containerId,
         },
-        "Container remove failed"
+        "Container cleanup failed"
       );
 
     }
 
-  }
+  },
+
 
 };
