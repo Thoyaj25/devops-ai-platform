@@ -108,15 +108,24 @@ model DeploymentJob {
   id           String    @id @default(cuid())
   deploymentId String
   status       JobStatus @default(PENDING)
+
   attempts     Int       @default(0)
   error        String?
+
   nextRetryAt  DateTime?
-  completedAt  DateTime?
   startedAt    DateTime?
+  completedAt  DateTime?
+
+  cancelRequestedAt DateTime?
+
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @default(now()) @updatedAt
 
   deployment Deployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+
+  @@index([deploymentId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model DeploymentLog {
@@ -192,6 +201,10 @@ enum DeploymentStatus {
 enum JobStatus {
   PENDING
   RUNNING
+
+  CANCEL_REQUESTED
+  CANCELLED
+
   COMPLETED
   FAILED
 }
