@@ -112,9 +112,12 @@ export default function DeploymentHistory({
 
     loadDeployments();
 
-    return () => {
-      mounted = false;
-    };
+const interval = setInterval(loadDeployments, 5000);
+
+return () => {
+  mounted = false;
+  clearInterval(interval);
+};
   }, [projectId]);
 
   if (loading) {

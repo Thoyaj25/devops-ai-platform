@@ -5,6 +5,7 @@ import PipelineForm from "@/components/forms/PipelineForm";
 import DeploymentForm from "@/components/forms/DeploymentForm";
 import EnvironmentList from "@/components/environments/EnvironmentList";
 import PipelineList from "@/components/pipelines/PipelineList";
+import DeploymentHistory from "@/components/deployments/DeploymentHistory";
 import ProjectHeader from "@/components/projects/ProjectHeader";
 import ProjectOverview from "@/components/projects/ProjectOverview";
 
@@ -38,6 +39,10 @@ export default async function ProjectPage({
           <div className="mt-8">
             <EnvironmentList projectId={id} />
           </div>
+          
+          <div className="mt-8">
+  <DeploymentHistory projectId={id} />
+</div>
 
           <div className="mt-8">
             <PipelineList projectId={id} />
