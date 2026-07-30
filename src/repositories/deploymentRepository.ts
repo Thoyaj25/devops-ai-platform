@@ -208,8 +208,12 @@ export const deploymentRepository = {
           projectId,
         }),
 
-        status:
-          DeploymentStatus.SUCCESS,
+        status: {
+  in: [
+    DeploymentStatus.SUCCESS,
+    DeploymentStatus.SUPERSEDED,
+  ],
+},
 
         containerId:{
           not:null,
@@ -313,52 +317,45 @@ export const deploymentRepository = {
 
 
   /**
-   * Previous deployment kept for rollback
-   */
-  findPreviousSuccessfulDeployment(
-    projectId:string,
-    currentDeploymentId:string
-  ) {
+ * Previous deployment kept for rollback.
+ *
+ * We allow both SUCCESS and SUPERSEDED deployments,
+ * but only if the deployment container still exists.
+ */
+findPreviousSuccessfulDeployment(
+  projectId: string,
+  currentDeploymentId: string
+) {
+  return prisma.deployment.findFirst({
+    where: {
+      projectId,
 
-    return prisma.deployment.findFirst({
+      id: {
+        not: currentDeploymentId,
+      },
 
-      where:{
-
-        projectId,
-
-        status:
+      status: {
+        in: [
           DeploymentStatus.SUCCESS,
-
-
-        id:{
-          not:
-            currentDeploymentId,
-        },
-
-
-        containerId:{
-          not:null,
-        },
-
+          DeploymentStatus.SUPERSEDED,
+        ],
       },
 
-
-      orderBy:{
-        createdAt:"desc",
+      containerId: {
+        not: null,
       },
+    },
 
+    orderBy: {
+      createdAt: "desc",
+    },
 
-      select:{
-
-        id:true,
-
-        containerId:true,
-
-      },
-
-    });
-
-  },
+    select: {
+      id: true,
+      containerId: true,
+    },
+  });
+},
 
 
   /**

@@ -46,6 +46,7 @@ export async function POST(
       previousDeploymentId,
     } = body;
 
+
     if (!deploymentId || !previousDeploymentId) {
       return NextResponse.json(
         {
@@ -58,22 +59,40 @@ export async function POST(
       );
     }
 
-    await rollbackService.rollback(
-      deploymentId,
-      previousDeploymentId
+
+    const rollbackResult =
+      await rollbackService.rollback(
+        deploymentId,
+        previousDeploymentId
+      );
+
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Rollback completed successfully",
+
+        // frontend will redirect here
+        deploymentId: rollbackResult.id,
+      },
+      {
+        status: 200,
+      }
     );
 
-    return NextResponse.json({
-      success: true,
-      message: "Rollback completed successfully",
-    });
+
   } catch (error) {
+
     logger.error(
       {
-        error,
+        error:
+          error instanceof Error
+            ? error.message
+            : error,
       },
       "Rollback request failed"
     );
+
 
     return NextResponse.json(
       {

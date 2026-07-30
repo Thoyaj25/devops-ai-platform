@@ -1,175 +1,237 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 type Props = {
   deploymentId: string;
+  previousDeploymentId?: string | null;
 };
+
+type Action =
+  | "start"
+  | "stop"
+  | "restart"
+  | "remove"
+  | "inspect"
+  | "rollback"
+  | null;
 
 export default function DeploymentControls({
   deploymentId,
+  previousDeploymentId,
 }: Props) {
   const router = useRouter();
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<Action>(null);
   const [message, setMessage] = useState("");
-  const [inspectData, setInspectData] = useState<unknown>(null);
-  const hasInspectData = inspectData !== null && inspectData !== undefined;
 
-  async function callApi(endpoint: string) {
+  const busy = loading !== null;
+  const canRollback = Boolean(previousDeploymentId) && !busy;
+
+  console.log("DEPLOYMENT CONTROLS RENDER", {
+    deploymentId,
+    previousDeploymentId,
+    loading,
+    busy,
+    canRollback,
+  });
+
+  async function request(
+    url: string,
+    options?: RequestInit
+  ) {
+    const response = await fetch(url, options);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error ?? "Request failed");
+    }
+
+    return data;
+  }
+
+  async function execute(
+    action: "start" | "stop" | "restart" | "remove"
+  ) {
+    setLoading(action);
+    setMessage("");
+
     try {
-      setLoading(true);
-      setMessage("");
-
-      const response = await fetch(
-        `/api/deployments/${deploymentId}/${endpoint}`,
+      const result = await request(
+        `/api/deployments/${deploymentId}/${action}`,
         {
           method: "POST",
         }
       );
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error ?? "Request failed");
-      }
-
       setMessage(
-        result.message ??
-          "Operation completed successfully"
-      );
+  result.message ??
+  "Rollback completed"
+);
 
-      // Clear inspection output after state-changing operations
-      if (
-        endpoint === "start" ||
-        endpoint === "stop" ||
-        endpoint === "restart" ||
-        endpoint === "remove"
-      ) {
-        setInspectData(null);
-      }
-
-      // Refresh Server Components so deployment data is updated
-      router.refresh();
+if (result.deploymentId) {
+  router.push(`/deployments/${result.deploymentId}`);
+} else {
+  router.refresh();
+}
     } catch (error) {
-      console.error(error);
-
       setMessage(
         error instanceof Error
           ? error.message
-          : "Request failed"
+          : "Operation failed"
       );
     } finally {
-      setLoading(false);
+      setLoading(null);
     }
   }
 
-  async function inspectDeployment() {
-    try {
-      setLoading(true);
-      setMessage("");
+  async function inspect() {
+    setLoading("inspect");
+    setMessage("");
 
-      const response = await fetch(
+    try {
+      const result = await request(
         `/api/deployments/${deploymentId}/inspect`
       );
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          result.error ?? "Inspection failed"
-        );
-      }
-
-      setInspectData(result);
-      setMessage("Inspection completed successfully");
+      setMessage(
+        JSON.stringify(result, null, 2)
+      );
     } catch (error) {
-      console.error(error);
-
       setMessage(
         error instanceof Error
           ? error.message
-          : "Inspection failed"
+          : "Inspect failed"
       );
     } finally {
-      setLoading(false);
+      setLoading(null);
     }
   }
 
-  async function removeDeployment() {
-    const confirmed = window.confirm(
-      "Are you sure you want to remove this deployment?"
-    );
-
-    if (!confirmed) {
+  async function rollback() {
+    if (!previousDeploymentId) {
+      setMessage("No previous deployment available");
       return;
     }
 
-    await callApi("remove");
+    if (!window.confirm("Rollback deployment?")) {
+      return;
+    }
+
+    setLoading("rollback");
+    setMessage("");
+
+    try {
+      const result = await request(
+        "/api/deployments/rollback",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            deploymentId,
+            previousDeploymentId,
+          }),
+        }
+      );
+
+      console.log("ROLLBACK RESPONSE", result);
+
+setMessage(result.message ?? "Rollback completed");
+
+await router.push(`/deployments/${result.deploymentId}`);
+
+router.refresh();
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Rollback failed"
+      );
+    } finally {
+      setLoading(null);
+    }
   }
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3">
-        <button
-          disabled={loading}
-          onClick={() => callApi("start")}
-          className="rounded bg-green-600 px-4 py-2 text-white disabled:opacity-50"
-        >
-          Start
-        </button>
+        <Button
+          text="Start"
+          disabled={busy}
+          loading={loading === "start"}
+          onClick={() => execute("start")}
+        />
 
-        <button
-          disabled={loading}
-          onClick={() => callApi("stop")}
-          className="rounded bg-red-600 px-4 py-2 text-white disabled:opacity-50"
-        >
-          Stop
-        </button>
+        <Button
+          text="Stop"
+          disabled={busy}
+          loading={loading === "stop"}
+          onClick={() => execute("stop")}
+        />
 
-        <button
-          disabled={loading}
-          onClick={() => callApi("restart")}
-          className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
-        >
-          Restart
-        </button>
+        <Button
+          text="Restart"
+          disabled={busy}
+          loading={loading === "restart"}
+          onClick={() => execute("restart")}
+        />
 
-        <button
-          disabled={loading}
-          onClick={inspectDeployment}
-          className="rounded bg-gray-700 px-4 py-2 text-white disabled:opacity-50"
-        >
-          Inspect
-        </button>
+        <Button
+          text="Inspect"
+          disabled={busy}
+          loading={loading === "inspect"}
+          onClick={inspect}
+        />
 
-        <button
-          disabled={loading}
-          onClick={removeDeployment}
-          className="rounded bg-black px-4 py-2 text-white disabled:opacity-50"
-        >
-          Remove
-        </button>
+        <Button
+          text="Rollback"
+          disabled={!canRollback}
+          loading={loading === "rollback"}
+          onClick={rollback}
+        />
+
+        <Button
+          text="Remove"
+          disabled={busy}
+          loading={loading === "remove"}
+          onClick={() => {
+            if (window.confirm("Remove deployment?")) {
+              execute("remove");
+            }
+          }}
+        />
       </div>
 
       {message && (
-        <div className="rounded border border-gray-300 bg-gray-100 p-3 text-sm">
+        <pre className="rounded border p-3 text-sm whitespace-pre-wrap">
           {message}
-        </div>
-      )}
-
-      {hasInspectData && (
-        <div>
-          <h3 className="mb-2 font-semibold">
-            Inspection Result
-          </h3>
-
-          <pre className="max-h-96 overflow-auto rounded bg-black p-4 text-xs text-green-400">
-            {JSON.stringify(inspectData, null, 2)}
-          </pre>
-        </div>
+        </pre>
       )}
     </div>
+  );
+}
+
+function Button({
+  text,
+  loading,
+  disabled,
+  onClick,
+}: {
+  text: string;
+  loading: boolean;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      disabled={disabled}
+      onClick={onClick}
+      className="rounded bg-blue-600 px-4 py-2 text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {loading ? "Running..." : text}
+    </button>
   );
 }

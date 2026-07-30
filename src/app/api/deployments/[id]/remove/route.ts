@@ -14,8 +14,8 @@ type RouteContext = {
   }>;
 };
 
-export async function DELETE(
-  request: Request,
+export async function POST(
+    request: Request,
   { params }: RouteContext
 ) {
   console.log("========== REMOVE API ==========");

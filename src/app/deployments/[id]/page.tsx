@@ -5,8 +5,8 @@ import { DeploymentStatus } from "@/generated/prisma";
 
 import Badge from "@/components/ui/Badge";
 import Card from "@/components/ui/Card";
-import DeploymentLogs from "@/components/deployments/DeploymentLogs";
 import DeploymentControls from "@/components/deployments/DeploymentControls";
+import DeploymentLogs from "@/components/deployments/DeploymentLogs";
 
 import { deploymentService } from "@/services/deployment/deploymentService";
 import { deploymentLogService } from "@/services/deployment/logs/deploymentLogService";
@@ -16,14 +16,6 @@ type Props = {
     id: string;
   }>;
 };
-
-async function getDeployment(id: string) {
-  try {
-    return await deploymentService.getDeployment(id);
-  } catch {
-    return null;
-  }
-}
 
 const ACTIVE_DEPLOYMENT_STATES: DeploymentStatus[] = [
   "PENDING",
@@ -38,34 +30,32 @@ export default async function DeploymentPage({
 }: Props) {
   const { id } = await params;
 
-  const deployment = await getDeployment(id);
+  const deployment = await deploymentService
+    .getDeployment(id)
+    .catch(() => null);
 
   if (!deployment) {
     notFound();
   }
 
-  const fetchedLogs = await deploymentLogService.getLogs(id);
+  console.log("Loaded deployment:", deployment.id);
 
-  const initialLogText = fetchedLogs
-    .map((entry) => entry.message)
+  const rollbackTarget =
+    await deploymentService
+      .getPreviousRollbackTarget(deployment.id)
+      .catch((err) => {
+        console.error("Rollback target error:", err);
+        return null;
+      });
+      console.log("ROLLBACK TARGET PAGE:", rollbackTarget);
+
+  console.log("Rollback target:", rollbackTarget);
+
+  const logs = await deploymentLogService.getLogs(id);
+
+  const initialLogText = logs
+    .map((l) => l.message)
     .join("\n");
-
-  const isActive = deployment.status === "SUCCESS";
-
-  const isDeploying = ACTIVE_DEPLOYMENT_STATES.includes(
-    deployment.status
-  );
-
-  const isFailed = deployment.status === "FAILED";
-
-  const isSuperseded =
-    deployment.status === "SUPERSEDED";
-
-  const isRollingBack =
-    deployment.status === "ROLLING_BACK";
-
-  const isRolledBack =
-    deployment.status === "ROLLED_BACK";
 
   const localhostUrl = deployment.hostPort
     ? `http://localhost:${deployment.hostPort}`
@@ -84,7 +74,6 @@ export default async function DeploymentPage({
             <p className="text-sm text-gray-500">
               Deployment ID
             </p>
-
             <p className="font-mono break-all">
               {deployment.id}
             </p>
@@ -95,27 +84,29 @@ export default async function DeploymentPage({
               Deployment State
             </p>
 
-            {isActive && (
+            {deployment.status === "SUCCESS" && (
               <Badge>🟢 Active (Live)</Badge>
             )}
 
-            {isDeploying && (
+            {ACTIVE_DEPLOYMENT_STATES.includes(
+              deployment.status
+            ) && (
               <Badge>🔵 Deploying</Badge>
             )}
 
-            {isRollingBack && (
+            {deployment.status === "ROLLING_BACK" && (
               <Badge>🟠 Rolling Back</Badge>
             )}
 
-            {isRolledBack && (
+            {deployment.status === "ROLLED_BACK" && (
               <Badge>⚪ Rolled Back</Badge>
             )}
 
-            {isSuperseded && (
+            {deployment.status === "SUPERSEDED" && (
               <Badge>🟡 Superseded</Badge>
             )}
 
-            {isFailed && (
+            {deployment.status === "FAILED" && (
               <Badge>🔴 Failed</Badge>
             )}
           </div>
@@ -124,7 +115,6 @@ export default async function DeploymentPage({
             <p className="text-sm text-gray-500">
               Internal Status
             </p>
-
             <Badge>{deployment.status}</Badge>
           </div>
 
@@ -132,7 +122,6 @@ export default async function DeploymentPage({
             <p className="text-sm text-gray-500">
               Version
             </p>
-
             <p>{deployment.version ?? "N/A"}</p>
           </div>
 
@@ -140,7 +129,6 @@ export default async function DeploymentPage({
             <p className="text-sm text-gray-500">
               Project
             </p>
-
             <p>{deployment.project.name}</p>
           </div>
 
@@ -148,7 +136,6 @@ export default async function DeploymentPage({
             <p className="text-sm text-gray-500">
               Environment
             </p>
-
             <p>{deployment.environment.name}</p>
           </div>
 
@@ -156,7 +143,6 @@ export default async function DeploymentPage({
             <p className="text-sm text-gray-500">
               Pipeline
             </p>
-
             <p>{deployment.pipeline.name}</p>
           </div>
 
@@ -164,7 +150,6 @@ export default async function DeploymentPage({
             <p className="text-sm text-gray-500">
               Container ID
             </p>
-
             <p className="font-mono break-all">
               {deployment.containerId ?? "Container Removed"}
             </p>
@@ -232,7 +217,7 @@ export default async function DeploymentPage({
 
           <div>
             <p className="text-sm text-gray-500">
-              Last Updated
+              Updated
             </p>
 
             <p>
@@ -248,6 +233,7 @@ export default async function DeploymentPage({
       <Card title="Container Controls">
         <DeploymentControls
           deploymentId={deployment.id}
+          previousDeploymentId={rollbackTarget?.id}
         />
       </Card>
 
@@ -255,9 +241,7 @@ export default async function DeploymentPage({
         <DeploymentLogs
           deploymentId={deployment.id}
           initialLogs={
-            initialLogText ||
-            deployment.logs ||
-            ""
+            initialLogText || deployment.logs || ""
           }
           initialStatus={deployment.status}
         />

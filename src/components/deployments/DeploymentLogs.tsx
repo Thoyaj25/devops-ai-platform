@@ -31,18 +31,10 @@ type ConnectionState =
 
 
 type ConnectionAction =
-  | {
-      type: "reset";
-    }
-  | {
-      type: "streaming";
-    }
-  | {
-      type: "completed";
-    }
-  | {
-      type: "disconnected";
-    };
+  | { type: "connecting" }
+  | { type: "streaming" }
+  | { type: "completed" }
+  | { type: "disconnected" };
 
 
 function connectionReducer(
@@ -52,7 +44,7 @@ function connectionReducer(
 
   switch (action.type) {
 
-    case "reset":
+    case "connecting":
       return "Connecting";
 
     case "streaming":
@@ -74,6 +66,7 @@ const TERMINAL_STATES: DeploymentStatus[] = [
   "SUCCESS",
   "FAILED",
   "SUPERSEDED",
+  "ROLLED_BACK",
 ];
 
 
@@ -83,16 +76,19 @@ export default function DeploymentLogs({
   initialStatus = "PENDING",
 }: Props) {
 
+
   const [logs, setLogs] =
     useState(initialLogs);
+
 
   const [status, setStatus] =
     useState<DeploymentStatus>(initialStatus);
 
 
+
   const [
     connectionState,
-    dispatchConnectionState,
+    dispatch,
   ] = useReducer(
     connectionReducer,
     TERMINAL_STATES.includes(initialStatus)
@@ -105,19 +101,19 @@ export default function DeploymentLogs({
     useRef<EventSource | null>(null);
 
 
-
   useEffect(() => {
+
 
     if (!deploymentId) {
       return;
     }
 
 
-    // Already finished deployment
     if (
-      TERMINAL_STATES.includes(status)
+      TERMINAL_STATES.includes(initialStatus)
     ) {
-      dispatchConnectionState({
+
+      dispatch({
         type: "completed",
       });
 
@@ -125,18 +121,18 @@ export default function DeploymentLogs({
     }
 
 
-    eventSourceRef.current?.close();
 
-
-    dispatchConnectionState({
-      type: "reset",
+    dispatch({
+      type: "connecting",
     });
+
 
 
     const source =
       new EventSource(
         `/api/deployments/${deploymentId}/stream`
       );
+
 
 
     eventSourceRef.current = source;
@@ -146,11 +142,11 @@ export default function DeploymentLogs({
     source.onopen = () => {
 
       console.log(
-        "Deployment log stream connected"
+        "Deployment stream connected"
       );
 
 
-      dispatchConnectionState({
+      dispatch({
         type: "streaming",
       });
 
@@ -166,10 +162,12 @@ export default function DeploymentLogs({
           JSON.parse(event.data);
 
 
+
         setStatus(data.status);
 
 
-        if (data.logs) {
+
+        if (data.logs !== null) {
           setLogs(data.logs);
         }
 
@@ -181,7 +179,7 @@ export default function DeploymentLogs({
           )
         ) {
 
-          dispatchConnectionState({
+          dispatch({
             type: "completed",
           });
 
@@ -208,12 +206,12 @@ export default function DeploymentLogs({
 
     source.onerror = () => {
 
-      console.error(
-        "Deployment log stream disconnected"
+      console.warn(
+        "Deployment stream disconnected"
       );
 
 
-      dispatchConnectionState({
+      dispatch({
         type: "disconnected",
       });
 
@@ -235,7 +233,7 @@ export default function DeploymentLogs({
     };
 
 
-  }, [deploymentId, status]);
+  }, [deploymentId, initialStatus]);
 
 
 

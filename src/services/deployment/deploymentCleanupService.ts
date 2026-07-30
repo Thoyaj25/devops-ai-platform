@@ -39,13 +39,19 @@ const deployments =
   );
 
 
-      const oldDeployments =
-        deployments
-          .filter(
-            deployment =>
-              deployment.id !== deploymentId
-          )
-          .slice(RETAIN_SUCCESSFUL_DEPLOYMENTS - 1);
+      //
+// Keep:
+//
+// 1. Current deployment
+// 2. Newest previous deployment (rollback target)
+//
+// Everything older gets cleaned.
+//
+const oldDeployments = deployments.filter(
+  (deployment, index) =>
+    deployment.id !== deploymentId &&
+    index >= (RETAIN_SUCCESSFUL_DEPLOYMENTS - 1)
+);
 
 
 
@@ -75,15 +81,23 @@ const deployments =
 
 
           //
-          // 1. Mark DB state first
-          //
-          await deploymentRepository.update(
-            deployment.id,
-            {
-              status: DeploymentStatus.SUPERSEDED,
-              isHealthy: false,
-            }
-          );
+// Protect rollback target
+//
+const isRollbackTarget =
+  deployment.id === deployments[1]?.id;
+
+
+if (!isRollbackTarget) {
+
+  await deploymentRepository.update(
+    deployment.id,
+    {
+      status: DeploymentStatus.SUPERSEDED,
+      isHealthy: false,
+    }
+  );
+
+}
 
 
           //
@@ -116,57 +130,58 @@ const deployments =
 
           }
 
+// 3. Remove container
+//
+// Skip the newest previous deployment.
+// We keep it as the rollback target.
+//
+if (
+  deployment.containerId &&
+  deployment.id !== deployments[1]?.id
+) {
+  try {
 
+    await provider.remove(
+      deployment.containerId
+    );
 
-          //
-          // 3. Remove container
-          //
-          if (deployment.containerId) {
+    console.info(
+      "[Cleanup] Container removed",
+      {
+        containerId:
+          deployment.containerId
+      }
+    );
 
-            try {
+  } catch (error) {
 
-              await provider.remove(
-                deployment.containerId
-              );
+    console.error(
+      "[Cleanup] Container removal failed",
+      {
+        containerId:
+          deployment.containerId,
+        error
+      }
+    );
 
-
-              console.info(
-                "[Cleanup] Container removed",
-                {
-                  containerId:
-                    deployment.containerId
-                }
-              );
-
-
-            } catch(error) {
-
-              console.error(
-                "[Cleanup] Container removal failed",
-                {
-                  containerId:
-                    deployment.containerId,
-                  error
-                }
-              );
-
-            }
-
-          }
+  }
+}
 
 
 
           //
           // 4. Clear runtime metadata
           //
-          await deploymentRepository.update(
-            deployment.id,
-            {
-              containerId: null,
-              hostPort: null,
-              containerUrl: null,
-            }
-          );
+          if (deployment.id !== deployments[1]?.id) {
+  await deploymentRepository.update(
+    deployment.id,
+    {
+      containerId: null,
+      hostPort: null,
+      containerUrl: null,
+    }
+  );
+}
 
 
 
