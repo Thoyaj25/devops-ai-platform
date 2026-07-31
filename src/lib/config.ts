@@ -19,4 +19,12 @@ export const config = {
       process.env.DEPLOYMENT_VERIFY_TIMEOUT_MS ?? 120_000
     ),
   },
+
+  workerHeartbeatSeconds: Number(
+    process.env.WORKER_HEARTBEAT_SECONDS ?? 10
+  ),
+
+  workerRecoveryTimeoutSeconds: Number(
+    process.env.WORKER_RECOVERY_TIMEOUT_SECONDS ?? 60
+  ),
 };

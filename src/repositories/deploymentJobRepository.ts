@@ -62,6 +62,17 @@ export const deploymentJobRepository = {
     });
   },
 
+  async findRunningJobsOlderThan(before: Date) {
+    return prisma.deploymentJob.findMany({
+      where: {
+        status: JobStatus.RUNNING,
+        startedAt: {
+          lt: before,
+        },
+      },
+    });
+  },
+
   async update(
     id: string,
     data: UpdateJobData
@@ -132,10 +143,10 @@ export const deploymentJobRepository = {
       },
       data: {
         status: JobStatus.PENDING,
-        error: null,
         startedAt: null,
         completedAt: null,
         nextRetryAt: null,
+        error: "Recovered after worker interruption",
       },
     });
   },

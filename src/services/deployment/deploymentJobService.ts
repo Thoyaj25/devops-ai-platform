@@ -11,7 +11,7 @@ type UpdateJobData =
 
 
 
-function requireId(id:string) {
+function requireId(id: string) {
 
   if (!id?.trim()) {
     throw new Error(
@@ -28,7 +28,7 @@ export const deploymentJobService = {
 
 
   async createJob(
-    deploymentId:string
+    deploymentId: string
   ) {
 
     if (!deploymentId?.trim()) {
@@ -55,11 +55,21 @@ export const deploymentJobService = {
 
   },
 
+  async findRunningJobsOlderThan(
+    before: Date
+  ) {
+
+    return deploymentJobRepository.findRunningJobsOlderThan(
+      before
+    );
+
+  },
+
 
 
 
   async findById(
-    id:string
+    id: string
   ) {
 
     requireId(id);
@@ -74,8 +84,8 @@ export const deploymentJobService = {
 
 
   async updateJob(
-    id:string,
-    data:UpdateJobData
+    id: string,
+    data: UpdateJobData
   ) {
 
     requireId(id);
@@ -91,7 +101,7 @@ export const deploymentJobService = {
 
 
   async markRunning(
-    id:string
+    id: string
   ) {
 
     requireId(id);
@@ -119,7 +129,7 @@ export const deploymentJobService = {
 
 
   async markCompleted(
-    id:string
+    id: string
   ) {
 
     requireId(id);
@@ -150,7 +160,7 @@ export const deploymentJobService = {
 
 
   async incrementAttempts(
-    id:string
+    id: string
   ) {
 
     requireId(id);
@@ -165,8 +175,8 @@ export const deploymentJobService = {
 
 
   async scheduleRetry(
-    id:string,
-    retryAt:Date
+    id: string,
+    retryAt: Date
   ) {
 
     requireId(id);
@@ -194,8 +204,23 @@ export const deploymentJobService = {
 
 
 
+  async requeue(
+    id: string
+  ) {
+
+    requireId(id);
+
+    return deploymentJobRepository.requeue(
+      id
+    );
+
+  },
+
+
+
+
   async requeueJob(
-    id:string
+    id: string
   ) {
 
     requireId(id);
@@ -210,8 +235,8 @@ export const deploymentJobService = {
 
 
   async markFailed(
-    id:string,
-    error?:string
+    id: string,
+    error?: string
   ) {
 
     requireId(id);
@@ -225,7 +250,7 @@ export const deploymentJobService = {
   },
 
   async requestCancellation(
-    id:string
+    id: string
   ) {
 
     requireId(id);
@@ -237,7 +262,7 @@ export const deploymentJobService = {
   },
 
   async markCancelled(
-    id:string
+    id: string
   ) {
 
     requireId(id);
@@ -250,9 +275,9 @@ export const deploymentJobService = {
 
 
   async failWithRetry(
-    id:string,
-    error:string,
-    retrySeconds:number
+    id: string,
+    error: string,
+    retrySeconds: number
   ) {
 
 
