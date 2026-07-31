@@ -174,6 +174,31 @@ export const deploymentJobRepository = {
     });
   },
 
+  async requestCancellation(id: string) {
+    return prisma.deploymentJob.update({
+      where: {
+        id,
+      },
+      data: {
+        status: JobStatus.CANCEL_REQUESTED,
+        cancelRequestedAt: new Date(),
+      },
+    });
+  },
+
+  async markCancelled(id: string) {
+    return prisma.deploymentJob.update({
+      where: {
+        id,
+      },
+      data: {
+        status: JobStatus.CANCELLED,
+        completedAt: new Date(),
+        nextRetryAt: null,
+      },
+    });
+  },
+
   async delete(id: string) {
     return prisma.deploymentJob.delete({
       where: {

@@ -51,6 +51,15 @@ export const deploymentService = {
     return deployment;
   },
 
+  async updateStatus(
+    id: string,
+    status: DeploymentStatus
+  ) {
+    return deploymentRepository.update(id, {
+      status,
+    });
+  },
+
   /**
    * Returns the most recent deployment that can be
    * used as a rollback target.

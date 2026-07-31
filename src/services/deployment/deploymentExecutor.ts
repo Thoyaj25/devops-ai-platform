@@ -15,9 +15,15 @@ import { stageRunner } from "./stageRunner";
 import { DeploymentStage } from "./stages";
 import { workspaceService } from "./workspace/workspaceService";
 import { deploymentRollbackService } from "./deploymentRollbackService";
+import { checkDeploymentCancellation } from "./cancellationService";
+import { DeploymentCancelledError } from "./errors/deploymentCancelledError";
+import { throwIfCancellationRequested } from "./throwIfCancellationRequested";
 
 export const deploymentExecutor = {
-  async execute(deploymentId: string): Promise<void> {
+  async execute(
+    deploymentId: string,
+    jobId: string
+  ): Promise<void> {
     const deployment = await deploymentRepository.findById(deploymentId);
 
     if (!deployment) {
@@ -52,6 +58,8 @@ export const deploymentExecutor = {
       //
       // Checkout
       //
+      await checkDeploymentCancellation(jobId);
+      await throwIfCancellationRequested(jobId);
       await stageRunner.run(
         deploymentId,
         DeploymentStage.CLONING,
@@ -70,12 +78,19 @@ export const deploymentExecutor = {
             300_000,
             "Repository checkout timed out"
           );
+
+          // TEMP: cancellation testing delay
+          await new Promise(
+            (resolve) => setTimeout(resolve, 120000)
+          );
         }
       );
+      await throwIfCancellationRequested(jobId);
 
       //
       // Build
       //
+      await checkDeploymentCancellation(jobId);
       await stageRunner.run(
         deploymentId,
         DeploymentStage.BUILDING,
@@ -91,10 +106,12 @@ export const deploymentExecutor = {
           );
         }
       );
+      await throwIfCancellationRequested(jobId);
 
       //
       // Deploy
       //
+      await checkDeploymentCancellation(jobId);
       const runtime = await stageRunner.run(
         deploymentId,
         DeploymentStage.DEPLOYING,
@@ -125,10 +142,12 @@ export const deploymentExecutor = {
           return result;
         }
       );
+      await throwIfCancellationRequested(jobId);
 
       //
       // Verify + Expose
       //
+      await checkDeploymentCancellation(jobId);
       await stageRunner.run(
         deploymentId,
         DeploymentStage.VERIFYING,
@@ -164,7 +183,33 @@ export const deploymentExecutor = {
           }
         }
       );
+      await throwIfCancellationRequested(jobId);
+
     } catch (error) {
+      if (error instanceof DeploymentCancelledError) {
+        logger.info(
+          {
+            deploymentId,
+          },
+          "Deployment cancelled"
+        );
+
+        await deploymentLogService.append(
+          deploymentId,
+          "Deployment cancelled by user"
+        );
+
+        await deploymentRepository.update(
+          deploymentId,
+          {
+            status: DeploymentStatus.CANCELLED,
+            isHealthy: false,
+          }
+        );
+
+        throw error;
+      }
+
       const message =
         error instanceof Error ? error.message : String(error);
 
@@ -191,16 +236,16 @@ export const deploymentExecutor = {
       }
 
       try {
-  await deploymentRollbackService.rollback(
-    deploymentId,
-    containerId
-  );
-} catch (rollbackError) {
-  logger.warn({
-    deploymentId,
-    rollbackError,
-  });
-}
+        await deploymentRollbackService.rollback(
+          deploymentId,
+          containerId
+        );
+      } catch (rollbackError) {
+        logger.warn({
+          deploymentId,
+          rollbackError,
+        });
+      }
 
       await deploymentRepository.update(deploymentId, {
         status: DeploymentStatus.FAILED,

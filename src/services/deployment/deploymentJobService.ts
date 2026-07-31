@@ -224,7 +224,29 @@ export const deploymentJobService = {
 
   },
 
+  async requestCancellation(
+    id:string
+  ) {
 
+    requireId(id);
+
+    return deploymentJobRepository.requestCancellation(
+      id
+    );
+
+  },
+
+  async markCancelled(
+    id:string
+  ) {
+
+    requireId(id);
+
+    return deploymentJobRepository.markCancelled(
+      id
+    );
+
+  },
 
 
   async failWithRetry(

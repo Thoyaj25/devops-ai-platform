@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger";
 import { deploymentExecutor } from "@/services/deployment/deploymentExecutor";
 import { deploymentJobService } from "@/services/deployment/deploymentJobService";
 import { workerHeartbeatService } from "@/services/worker/workerHeartbeatService";
+import { DeploymentCancelledError } from "@/services/deployment/errors/deploymentCancelledError";
 
 const WORKER_ID = "deployment-worker-1";
 const HEARTBEAT_INTERVAL_MS = 10_000;
@@ -72,8 +73,9 @@ export async function runDeploymentWorker(): Promise<void> {
 
         try {
           await deploymentExecutor.execute(
-            job.deploymentId
-          );
+  job.deploymentId,
+  job.id
+);
 
           await deploymentJobService.updateJob(job.id, {
             status: JobStatus.COMPLETED,
@@ -89,6 +91,26 @@ export async function runDeploymentWorker(): Promise<void> {
             "Deployment completed successfully"
           );
         } catch (error) {
+          if (error instanceof DeploymentCancelledError) {
+  await deploymentJobService.updateJob(
+    job.id,
+    {
+      status: JobStatus.CANCELLED,
+      completedAt: new Date(),
+      error: "Cancelled by user",
+    }
+  );
+
+  logger.info(
+    {
+      workerId: WORKER_ID,
+      jobId: job.id,
+    },
+    "Deployment job cancelled"
+  );
+
+  continue;
+}
           await deploymentJobService.incrementAttempts(
             job.id
           );
