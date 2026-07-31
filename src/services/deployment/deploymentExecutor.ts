@@ -18,8 +18,39 @@ import { deploymentRollbackService } from "./deploymentRollbackService";
 import { checkDeploymentCancellation } from "./cancellationService";
 import { DeploymentCancelledError } from "./errors/deploymentCancelledError";
 import { throwIfCancellationRequested } from "./throwIfCancellationRequested";
+import { DeploymentTimeoutError } from "./errors/deploymentTimeoutError";
 
 export const deploymentExecutor = {
+  async failDeployment(
+    deploymentId: string,
+    containerId: string | undefined,
+    logMessage: string,
+    stack?: string
+  ) {
+    await deploymentLogService.append(deploymentId, logMessage);
+
+    if (stack) {
+      await deploymentLogService.append(deploymentId, stack);
+    }
+
+    try {
+      await deploymentRollbackService.rollback(
+        deploymentId,
+        containerId
+      );
+    } catch (rollbackError) {
+      logger.warn({
+        deploymentId,
+        rollbackError,
+      });
+    }
+
+    await deploymentRepository.update(deploymentId, {
+      status: DeploymentStatus.FAILED,
+      isHealthy: false,
+    });
+  },
+
   async execute(
     deploymentId: string,
     jobId: string
@@ -75,14 +106,11 @@ export const deploymentExecutor = {
               workspace,
               deployment.pipeline.branch ?? "main"
             ),
-            300_000,
+            config.deploymentTimeouts.checkoutMs,
             "Repository checkout timed out"
           );
 
-          // TEMP: cancellation testing delay
-          await new Promise(
-            (resolve) => setTimeout(resolve, 120000)
-          );
+          
         }
       );
       await throwIfCancellationRequested(jobId);
@@ -100,8 +128,11 @@ export const deploymentExecutor = {
           });
 
           await withTimeout(
-            provider.build(deploymentId, workspace),
-            600_000,
+            provider.build(
+              deploymentId,
+              workspace
+            ),
+            config.deploymentTimeouts.buildMs,
             "Docker build timed out"
           );
         }
@@ -127,7 +158,7 @@ export const deploymentExecutor = {
               image,
               deploymentId
             ),
-            300_000,
+            config.deploymentTimeouts.deployMs,
             "Container deployment timed out"
           );
 
@@ -210,6 +241,25 @@ export const deploymentExecutor = {
         throw error;
       }
 
+      if (error instanceof DeploymentTimeoutError) {
+        logger.error(
+          {
+            deploymentId,
+            containerId,
+            message: error.message,
+          },
+          "Deployment timed out"
+        );
+
+        await this.failDeployment(
+          deploymentId,
+          containerId,
+          `Deployment timed out:\n${error.message}`
+        );
+
+        throw error;
+      }
+
       const message =
         error instanceof Error ? error.message : String(error);
 
@@ -223,34 +273,12 @@ export const deploymentExecutor = {
         stack,
       });
 
-      await deploymentLogService.append(
+      await this.failDeployment(
         deploymentId,
-        `Deployment failed:\n${message}`
+        containerId,
+        `Deployment failed:\n${message}`,
+        stack
       );
-
-      if (stack) {
-        await deploymentLogService.append(
-          deploymentId,
-          stack
-        );
-      }
-
-      try {
-        await deploymentRollbackService.rollback(
-          deploymentId,
-          containerId
-        );
-      } catch (rollbackError) {
-        logger.warn({
-          deploymentId,
-          rollbackError,
-        });
-      }
-
-      await deploymentRepository.update(deploymentId, {
-        status: DeploymentStatus.FAILED,
-        isHealthy: false,
-      });
 
       throw error;
     } finally {
