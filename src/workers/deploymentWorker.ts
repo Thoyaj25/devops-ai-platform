@@ -66,10 +66,7 @@ export async function runDeploymentWorker(): Promise<void> {
           "Processing deployment job"
         );
 
-        await deploymentJobService.updateJob(job.id, {
-          status: JobStatus.RUNNING,
-          startedAt: new Date(),
-        });
+        
 
         try {
           await deploymentExecutor.execute(
