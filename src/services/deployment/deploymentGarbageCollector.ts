@@ -1,5 +1,6 @@
 import { deploymentRepository } from "@/repositories/deploymentRepository";
 import { DockerDeploymentProvider } from "@/services/providers";
+import { logger } from "@/lib/logger";
 
 export const deploymentGarbageCollector = {
   async collect() {
@@ -8,8 +9,11 @@ export const deploymentGarbageCollector = {
     const deployments =
       await deploymentRepository.findGarbageDeployments();
 
-    console.log(
-      `[GarbageCollector] Found ${deployments.length} garbage deployments`
+    logger.info(
+      {
+        count: deployments.length,
+      },
+      "Garbage collector found deployments"
     );
 
     let existing = 0;
@@ -17,9 +21,13 @@ export const deploymentGarbageCollector = {
 
     for (const deployment of deployments) {
       if (!deployment.containerId) {
-        console.log(
-          `[GarbageCollector] ${deployment.id}: no container recorded`
+        logger.info(
+          {
+            deploymentId: deployment.id,
+          },
+          "Garbage collector found deployment without container"
         );
+
         continue;
       }
 
@@ -34,16 +42,22 @@ export const deploymentGarbageCollector = {
       if (!exists) {
         missing++;
 
-        console.log(
-          `[GarbageCollector] ${deployment.id}: container missing`
+        logger.info(
+          {
+            deploymentId: deployment.id,
+          },
+          "Container missing. Clearing stale metadata"
         );
 
         await deploymentRepository.clearContainer(
           deployment.id
         );
 
-        console.log(
-          `[GarbageCollector] Cleared stale deployment metadata`
+        logger.info(
+          {
+            deploymentId: deployment.id,
+          },
+          "Cleared stale deployment metadata"
         );
 
         continue;
@@ -51,8 +65,12 @@ export const deploymentGarbageCollector = {
 
       existing++;
 
-      console.log(
-        `[GarbageCollector] Removing container for ${deployment.id}`
+      logger.info(
+        {
+          deploymentId: deployment.id,
+          containerId: deployment.containerId,
+        },
+        "Removing garbage deployment container"
       );
 
       try {
@@ -63,31 +81,47 @@ export const deploymentGarbageCollector = {
         // Container may already be stopped.
       }
 
-      await provider.remove(
-        deployment.containerId
-      );
+      try {
+        await provider.remove(
+          deployment.containerId
+        );
 
-      console.log(
-        `[GarbageCollector] Removed ${deployment.containerId}`
-      );
+        logger.info(
+          {
+            containerId: deployment.containerId,
+          },
+          "Removed deployment container"
+        );
+      } catch (error) {
+        logger.error(
+          {
+            containerId: deployment.containerId,
+            error,
+          },
+          "Failed removing deployment container"
+        );
+
+        continue;
+      }
 
       await deploymentRepository.clearContainer(
         deployment.id
       );
 
-      console.log(
-        `[GarbageCollector] Cleared deployment runtime metadata`
+      logger.info(
+        {
+          deploymentId: deployment.id,
+        },
+        "Cleared deployment runtime metadata"
       );
     }
 
-    console.log("");
-
-    console.log(
-      `[GarbageCollector] Existing containers removed: ${existing}`
-    );
-
-    console.log(
-      `[GarbageCollector] Missing containers cleaned: ${missing}`
+    logger.info(
+      {
+        existingRemoved: existing,
+        missingCleaned: missing,
+      },
+      "Garbage collector completed"
     );
   },
 };

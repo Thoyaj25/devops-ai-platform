@@ -424,16 +424,18 @@ findPreviousSuccessfulDeployment(
 
 
         status:{
-          in:[
+  in:[
 
-            DeploymentStatus.FAILED,
+    DeploymentStatus.FAILED,
 
-            DeploymentStatus.SUPERSEDED,
+    DeploymentStatus.SUPERSEDED,
 
-            DeploymentStatus.ROLLED_BACK,
+    DeploymentStatus.ROLLED_BACK,
 
-          ],
-        },
+    DeploymentStatus.CANCELLED,
+
+  ],
+},
 
 
         containerId:{
