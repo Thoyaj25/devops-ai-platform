@@ -13,6 +13,7 @@ const TERMINAL_STATES = [
   "FAILED",
   "SUPERSEDED",
   "ROLLED_BACK",
+  "CANCELLED",
 ] as const;
 
 type TerminalState =

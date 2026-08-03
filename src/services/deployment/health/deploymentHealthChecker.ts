@@ -3,7 +3,45 @@ import { deploymentJobRepository } from "@/repositories/deploymentJobRepository"
 import { DeploymentCancelledError } from "@/services/deployment/errors/deploymentCancelledError";
 
 const sleep = (ms: number) =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+  new Promise((resolve) =>
+    setTimeout(resolve, ms)
+  );
+
+
+const sleepWithCancellationCheck = async (
+  ms: number,
+  jobId?: string
+) => {
+
+  const interval = 250;
+  let elapsed = 0;
+
+
+  while (elapsed < ms) {
+
+    if (jobId) {
+
+      const job =
+        await deploymentJobRepository.findById(jobId);
+
+
+      if (
+        job?.status === JobStatus.CANCEL_REQUESTED ||
+        job?.status === JobStatus.CANCELLED
+      ) {
+
+        throw new DeploymentCancelledError();
+
+      }
+
+    }
+
+
+    await sleep(interval);
+
+    elapsed += interval;
+  }
+};
 
 export class DeploymentHealthChecker {
   async check(
@@ -15,22 +53,25 @@ export class DeploymentHealthChecker {
     const url = `http://${containerName}:3000/api/health`;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      //
-      // Check for cancellation before every health check
-      //
-      if (jobId) {
-        const job =
-          await deploymentJobRepository.findById(jobId);
 
-        
+  if (jobId) {
 
-        if (job?.status === JobStatus.CANCEL_REQUESTED) {
-          
+    const job =
+      await deploymentJobRepository.findById(jobId);
 
-          throw new DeploymentCancelledError();
-        }
-      }
 
+    if (
+      job?.status === JobStatus.CANCEL_REQUESTED ||
+      job?.status === JobStatus.CANCELLED
+    ) {
+
+      console.log(
+        `[HealthCheck] Deployment cancelled during health check`
+      );
+
+      throw new DeploymentCancelledError();
+    }
+  }
       try {
         const response = await fetch(url);
 
@@ -54,7 +95,10 @@ export class DeploymentHealthChecker {
         );
       }
 
-      await sleep(delayMs);
+      await sleepWithCancellationCheck(
+  delayMs,
+  jobId
+);
     }
 
     throw new Error(
