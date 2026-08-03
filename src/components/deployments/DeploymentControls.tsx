@@ -30,13 +30,7 @@ export default function DeploymentControls({
   const busy = loading !== null;
   const canRollback = Boolean(previousDeploymentId) && !busy;
 
-  console.log("DEPLOYMENT CONTROLS RENDER", {
-    deploymentId,
-    previousDeploymentId,
-    loading,
-    busy,
-    canRollback,
-  });
+
 
   async function request(
     url: string,
@@ -138,7 +132,6 @@ export default function DeploymentControls({
         }
       );
 
-      console.log("ROLLBACK RESPONSE", result);
 
       setMessage(result.message ?? "Rollback completed");
 
