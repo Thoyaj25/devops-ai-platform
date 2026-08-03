@@ -173,10 +173,6 @@ export default function DeploymentForm({
     );
   }
 
-  console.log("Environments:", environments);
-  console.log("Pipelines:", pipelines);
-  console.log("Fetching:", fetching);
-  console.log("Project:", projectId);
 
   return (
     <div className="rounded-xl border p-6">

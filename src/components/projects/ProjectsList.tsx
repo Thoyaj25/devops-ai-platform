@@ -15,7 +15,6 @@ export default function ProjectsList() {
       try {
         setLoading(true);
         const data = await getProjects();
-        console.log("Projects:", data);
         setProjects(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load projects");

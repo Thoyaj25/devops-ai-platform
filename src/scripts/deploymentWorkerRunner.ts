@@ -1,15 +1,21 @@
+import { logger } from "@/lib/logger";
 import { runDeploymentWorker } from "@/workers/deploymentWorker";
 
-async function main() {
-  console.log("Deployment worker started");
+async function main(): Promise<void> {
+  logger.info("Deployment worker started");
 
   await runDeploymentWorker();
 
-  console.log("Deployment worker stopped");
+  logger.info("Deployment worker stopped");
 }
 
-main()
-  .catch((error) => {
-    console.error("Worker crashed", error);
-    process.exit(1);
-  });
+main().catch((error) => {
+  logger.error(
+    {
+      error,
+    },
+    "Worker crashed"
+  );
+
+  process.exit(1);
+});
