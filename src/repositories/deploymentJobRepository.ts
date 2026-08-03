@@ -77,15 +77,21 @@ export const deploymentJobRepository = {
     id: string,
     data: UpdateJobData
   ) {
+    
+
     return prisma.deploymentJob.update({
-      where: { id },
+      where: {
+        id,
+      },
       data,
     });
   },
 
   async incrementAttempts(id: string) {
     return prisma.deploymentJob.update({
-      where: { id },
+      where: {
+        id,
+      },
       data: {
         attempts: {
           increment: 1,
@@ -155,6 +161,8 @@ export const deploymentJobRepository = {
     id: string,
     retryAt: Date
   ) {
+    
+
     return prisma.deploymentJob.update({
       where: {
         id,
@@ -172,6 +180,8 @@ export const deploymentJobRepository = {
     id: string,
     error?: string
   ) {
+    
+
     return prisma.deploymentJob.update({
       where: {
         id,
@@ -186,6 +196,8 @@ export const deploymentJobRepository = {
   },
 
   async requestCancellation(id: string) {
+    
+
     return prisma.deploymentJob.update({
       where: {
         id,
@@ -198,6 +210,8 @@ export const deploymentJobRepository = {
   },
 
   async markCancelled(id: string) {
+    
+
     return prisma.deploymentJob.update({
       where: {
         id,

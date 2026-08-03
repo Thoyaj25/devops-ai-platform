@@ -3,23 +3,25 @@ import { dockerClient } from "./dockerClient";
 export const dockerImageService = {
 
   async build(
-    workspace: string,
-    image: string
-  ): Promise<void> {
+  workspace: string,
+  image: string,
+  jobId?: string
+): Promise<void> {
 
     const result =
-      await dockerClient.run(
-        "docker",
-        [
-          "build",
-          "-t",
-          image,
-          "."
-        ],
-        {
-          cwd: workspace,
-        }
-      );
+  await dockerClient.run(
+    "docker",
+    [
+      "build",
+      "-t",
+      image,
+      "."
+    ],
+    {
+      cwd: workspace,
+      jobId,
+    }
+  );
 
 
     if (result.exitCode !== 0) {

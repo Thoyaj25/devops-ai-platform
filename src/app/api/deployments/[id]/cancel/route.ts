@@ -11,11 +11,22 @@ export async function POST(
 ) {
   try {
     const { id: deploymentId } = await params;
+    console.log("[CANCEL] deploymentId =", deploymentId);
 
     const jobs =
       await deploymentJobRepository.findByDeploymentId(
         deploymentId
       );
+      console.log(
+  "[CANCEL] jobs",
+  jobs.map(job => ({
+    id: job.id,
+    status: job.status,
+    deploymentId: job.deploymentId,
+  }))
+);
+
+
 
     if (!jobs.length) {
       return NextResponse.json(

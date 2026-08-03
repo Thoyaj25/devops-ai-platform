@@ -6,25 +6,29 @@ export const dockerClient = {
 
 
   async run(
-    command: string,
-    args: string[],
-    options?: {
-      cwd?: string;
-    }
-  ) {
+  command: string,
+  args: string[],
+  options?: {
+    cwd?: string;
+    jobId?: string;
+  }
+) {
 
 
     return commandRunner.run({
 
-      command,
+  command,
 
-      args,
+  args,
 
-      cwd:
-        options?.cwd ??
-        process.cwd()
+  cwd:
+    options?.cwd ??
+    process.cwd(),
 
-    });
+  jobId:
+    options?.jobId
+
+});
 
   },
 

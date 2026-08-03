@@ -1,13 +1,16 @@
 import { DeploymentTimeoutError } from "@/services/deployment/errors/deploymentTimeoutError";
+
 export async function withTimeout<T>(
   promise: Promise<T>,
   ms: number,
   message = "Operation timed out"
 ): Promise<T> {
-  let timer: NodeJS.Timeout;
+  let timer: NodeJS.Timeout | undefined;
 
   const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(message)), ms);
+    timer = setTimeout(() => {
+      reject(new DeploymentTimeoutError(message));
+    }, ms);
   });
 
   try {
@@ -16,6 +19,8 @@ export async function withTimeout<T>(
       timeout,
     ]);
   } finally {
-    clearTimeout(timer!);
+    if (timer) {
+      clearTimeout(timer);
+    }
   }
 }

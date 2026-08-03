@@ -74,9 +74,10 @@ export class DockerDeploymentProvider
 
 
   async build(
-    deploymentId: string,
-    workspace: string
-  ) {
+  deploymentId: string,
+  workspace: string,
+  jobId?: string
+) {
 
 
     const image =
@@ -104,9 +105,10 @@ export class DockerDeploymentProvider
 
 
     await dockerImageService.build(
-      workspace,
-      tag
-    );
+  workspace,
+  tag,
+  jobId
+);
 
 
 
@@ -122,20 +124,19 @@ export class DockerDeploymentProvider
 
 
   async deploy(
-    deploymentId: string,
-    workspace: string,
-    image: string,
-    tag: string
-  ): Promise<DeployResult> {
+  deploymentId: string,
+  workspace: string,
+  image: string,
+  tag: string,
+  jobId?: string
+): Promise<DeployResult> {
 
 
-    const fullImage =
-      `${image}:${tag}`;
+    const fullImage = `${image}:${tag}`;
 
 
 
-    const containerName =
-      `dep-${deploymentId}`;
+    const containerName = `dep-${deploymentId}`;
 
 
 
@@ -172,13 +173,13 @@ export class DockerDeploymentProvider
 
 
     await deploymentHealthChecker.check(
-      containerName
+      containerName,
+      jobId
     );
 
 
 
-    const containerUrl =
-      `http://${deploymentId}.${this.domain}`;
+    const containerUrl = `http://${deploymentId}.${this.domain}`;
 
 
 

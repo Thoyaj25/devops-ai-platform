@@ -11,23 +11,27 @@ import { proxyService } from "@/services/proxy/proxyService";
 
 import { deploymentCleanupService } from "./deploymentCleanupService";
 import { deploymentLogService } from "./logs/deploymentLogService";
+import { deploymentRollbackService } from "./deploymentRollbackService";
 import { stageRunner } from "./stageRunner";
 import { DeploymentStage } from "./stages";
 import { workspaceService } from "./workspace/workspaceService";
-import { deploymentRollbackService } from "./deploymentRollbackService";
+
 import { checkDeploymentCancellation } from "./cancellationService";
-import { DeploymentCancelledError } from "./errors/deploymentCancelledError";
 import { throwIfCancellationRequested } from "./throwIfCancellationRequested";
+
+import { DeploymentCancelledError } from "./errors/deploymentCancelledError";
 import { DeploymentTimeoutError } from "./errors/deploymentTimeoutError";
 
 export const deploymentExecutor = {
   async failDeployment(
     deploymentId: string,
-    containerId: string | undefined,
-    logMessage: string,
+    containerId?: string,
+    logMessage?: string,
     stack?: string
   ) {
-    await deploymentLogService.append(deploymentId, logMessage);
+    if (logMessage) {
+      await deploymentLogService.append(deploymentId, logMessage);
+    }
 
     if (stack) {
       await deploymentLogService.append(deploymentId, stack);
@@ -55,13 +59,15 @@ export const deploymentExecutor = {
     deploymentId: string,
     jobId: string
   ): Promise<void> {
-    const deployment = await deploymentRepository.findById(deploymentId);
+    const deployment =
+      await deploymentRepository.findById(deploymentId);
 
     if (!deployment) {
       throw new Error("Deployment not found");
     }
 
-    const repository = deployment.pipeline.repository;
+    const repository =
+      deployment.pipeline.repository;
 
     if (!repository) {
       throw new Error("Deployment repository missing");
@@ -73,9 +79,11 @@ export const deploymentExecutor = {
       throw new Error("DOCKER_IMAGE is not configured");
     }
 
-    const provider = new DockerDeploymentProvider();
+    const provider =
+      new DockerDeploymentProvider();
 
-    const workspace = await workspaceService.prepare(deploymentId);
+    const workspace =
+      await workspaceService.prepare(deploymentId);
 
     let containerId: string | undefined;
 
@@ -91,6 +99,7 @@ export const deploymentExecutor = {
       //
       await checkDeploymentCancellation(jobId);
       await throwIfCancellationRequested(jobId);
+
       await stageRunner.run(
         deploymentId,
         DeploymentStage.CLONING,
@@ -109,16 +118,15 @@ export const deploymentExecutor = {
             config.deploymentTimeouts.checkoutMs,
             "Repository checkout timed out"
           );
-
-          
         }
       );
-      await throwIfCancellationRequested(jobId);
 
       //
       // Build
       //
       await checkDeploymentCancellation(jobId);
+      await throwIfCancellationRequested(jobId);
+
       await stageRunner.run(
         deploymentId,
         DeploymentStage.BUILDING,
@@ -130,19 +138,21 @@ export const deploymentExecutor = {
           await withTimeout(
             provider.build(
               deploymentId,
-              workspace
+              workspace,
+              jobId
             ),
             config.deploymentTimeouts.buildMs,
             "Docker build timed out"
           );
         }
       );
-      await throwIfCancellationRequested(jobId);
 
       //
       // Deploy
       //
       await checkDeploymentCancellation(jobId);
+      await throwIfCancellationRequested(jobId);
+
       const runtime = await stageRunner.run(
         deploymentId,
         DeploymentStage.DEPLOYING,
@@ -156,7 +166,8 @@ export const deploymentExecutor = {
               deploymentId,
               workspace,
               image,
-              deploymentId
+              deploymentId,
+              jobId
             ),
             config.deploymentTimeouts.deployMs,
             "Container deployment timed out"
@@ -173,12 +184,13 @@ export const deploymentExecutor = {
           return result;
         }
       );
-      await throwIfCancellationRequested(jobId);
 
       //
-      // Verify + Expose
+      // Verify
       //
       await checkDeploymentCancellation(jobId);
+      await throwIfCancellationRequested(jobId);
+
       await stageRunner.run(
         deploymentId,
         DeploymentStage.VERIFYING,
@@ -214,14 +226,10 @@ export const deploymentExecutor = {
           }
         }
       );
-      await throwIfCancellationRequested(jobId);
-
     } catch (error) {
       if (error instanceof DeploymentCancelledError) {
         logger.info(
-          {
-            deploymentId,
-          },
+          { deploymentId },
           "Deployment cancelled"
         );
 
@@ -238,7 +246,7 @@ export const deploymentExecutor = {
           }
         );
 
-        throw error;
+        return;
       }
 
       if (error instanceof DeploymentTimeoutError) {
@@ -261,10 +269,14 @@ export const deploymentExecutor = {
       }
 
       const message =
-        error instanceof Error ? error.message : String(error);
+        error instanceof Error
+          ? error.message
+          : String(error);
 
       const stack =
-        error instanceof Error ? error.stack : undefined;
+        error instanceof Error
+          ? error.stack
+          : undefined;
 
       logger.error({
         deploymentId,
@@ -282,7 +294,9 @@ export const deploymentExecutor = {
 
       throw error;
     } finally {
-      await workspaceService.cleanup(deploymentId);
+      await workspaceService.cleanup(
+        deploymentId
+      );
     }
   },
 };

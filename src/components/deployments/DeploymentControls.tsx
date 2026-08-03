@@ -15,6 +15,7 @@ type Action =
   | "remove"
   | "inspect"
   | "rollback"
+  | "cancel"
   | null;
 
 export default function DeploymentControls({
@@ -66,15 +67,15 @@ export default function DeploymentControls({
       );
 
       setMessage(
-  result.message ??
-  "Rollback completed"
-);
+        result.message ??
+        "Rollback completed"
+      );
 
-if (result.deploymentId) {
-  router.push(`/deployments/${result.deploymentId}`);
-} else {
-  router.refresh();
-}
+      if (result.deploymentId) {
+        router.push(`/deployments/${result.deploymentId}`);
+      } else {
+        router.refresh();
+      }
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -139,16 +140,45 @@ if (result.deploymentId) {
 
       console.log("ROLLBACK RESPONSE", result);
 
-setMessage(result.message ?? "Rollback completed");
+      setMessage(result.message ?? "Rollback completed");
 
-await router.push(`/deployments/${result.deploymentId}`);
+      await router.push(`/deployments/${result.deploymentId}`);
 
-router.refresh();
+      router.refresh();
     } catch (error) {
       setMessage(
         error instanceof Error
           ? error.message
           : "Rollback failed"
+      );
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function cancelDeployment() {
+    if (!window.confirm("Cancel deployment?")) {
+      return;
+    }
+
+    setLoading("cancel");
+    setMessage("");
+
+    try {
+      const result = await request(
+        `/api/deployments/${deploymentId}/cancel`,
+        {
+          method: "POST",
+        }
+      );
+
+      setMessage(result.message ?? "Cancellation requested");
+      router.refresh();
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Cancellation failed"
       );
     } finally {
       setLoading(null);
@@ -191,6 +221,13 @@ router.refresh();
           disabled={!canRollback}
           loading={loading === "rollback"}
           onClick={rollback}
+        />
+
+        <Button
+          text="Cancel"
+          disabled={busy}
+          loading={loading === "cancel"}
+          onClick={cancelDeployment}
         />
 
         <Button
