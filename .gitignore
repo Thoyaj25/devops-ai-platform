@@ -43,5 +43,15 @@ next-env.d.ts
 /src/generated/prisma
 cookies.txt
 
-nginx/conf.d/*.conf
-!nginx/conf.d/.gitkeep
+
+# Local development TLS certificates
+nginx/certs/
+
+# Local backup files
+*.backup
+
+# Nginx config dump
+nginx-final.txt
+
+# Temporary TypeScript backups
+*.ts.backup
