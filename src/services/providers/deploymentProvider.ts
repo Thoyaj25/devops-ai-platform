@@ -1,3 +1,4 @@
+import { HealthCheckConfig } from "@/services/deployment/health/healthCheckConfig";
 export interface DeployResult {
   containerId: string;
   containerName: string;
@@ -43,16 +44,16 @@ export interface DeploymentProvider {
   ): Promise<void>;
 
   /**
-   * Start application container
-   */
-  deploy(
-    deploymentId: string,
-    workspace: string,
-    image: string,
-    tag: string,
-    command?: string
-  ): Promise<DeployResult>;
-
+ * Start application container
+ */
+deploy(
+  deploymentId: string,
+  workspace: string,
+  image: string,
+  tag: string,
+  healthCheck: HealthCheckConfig,
+  jobId?: string
+): Promise<DeployResult>;
   /**
    * Stop running container
    */

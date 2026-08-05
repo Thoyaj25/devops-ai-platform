@@ -15,12 +15,10 @@ import { deploymentRollbackService } from "./deploymentRollbackService";
 import { stageRunner } from "./stageRunner";
 import { DeploymentStage } from "./stages";
 import { workspaceService } from "./workspace/workspaceService";
-
-import { checkDeploymentCancellation } from "./cancellationService";
 import { throwIfCancellationRequested } from "./throwIfCancellationRequested";
-
 import { DeploymentCancelledError } from "./errors/deploymentCancelledError";
 import { DeploymentTimeoutError } from "./errors/deploymentTimeoutError";
+import { cleanupCancelledDeployment } from "./cancellationCleanup";
 
 export const deploymentExecutor = {
   async failDeployment(
@@ -37,45 +35,113 @@ export const deploymentExecutor = {
       await deploymentLogService.append(deploymentId, stack);
     }
 
+    // 7. Generic failure cleanup & rollback wrapper
     try {
       await deploymentRollbackService.rollback(
         deploymentId,
         containerId
       );
     } catch (rollbackError) {
-      logger.warn({
-        deploymentId,
-        rollbackError,
-      });
+      logger.warn(
+        {
+          deploymentId,
+          rollbackError,
+        },
+        "Rollback failed during deployment failure handling"
+      );
     }
 
-    await deploymentRepository.update(deploymentId, {
-      status: DeploymentStatus.FAILED,
-      isHealthy: false,
-    });
+    try {
+      await deploymentRepository.update(deploymentId, {
+        status: DeploymentStatus.FAILED,
+        isHealthy: false,
+      });
+    } catch (dbError) {
+      logger.error(
+        { deploymentId, dbError },
+        "Failed to update deployment status to FAILED in database"
+      );
+    }
   },
 
   async execute(
     deploymentId: string,
     jobId: string
   ): Promise<void> {
+    // 9. Add startup logging
+    logger.info(
+      { deploymentId, jobId },
+      "Starting deployment execution pipeline"
+    );
+
     const deployment =
       await deploymentRepository.findById(deploymentId);
 
+    // 4. Validate deployment relations (Recommended)
     if (!deployment) {
       throw new Error("Deployment not found");
     }
 
-    const repository =
-      deployment.pipeline.repository;
-
-    if (!repository) {
-      throw new Error("Deployment repository missing");
+    if (!deployment.pipeline) {
+      throw new Error("Deployment pipeline was not loaded");
     }
 
-    const image = process.env.DOCKER_IMAGE;
+    if (!deployment.project) {
+      throw new Error("Deployment project was not loaded");
+    }
+
+    if (!deployment.environment) {
+      throw new Error("Deployment environment was not loaded");
+    }
+
+    const repository = deployment.pipeline.repository;
+
+    if (!repository?.trim()) {
+      logger.error(
+        {
+          deploymentId: deployment.id,
+          pipelineId: deployment.pipelineId,
+        },
+        "Pipeline repository is not configured"
+      );
+
+      throw new Error(
+        `Pipeline ${deployment.pipelineId} has no repository configured`
+      );
+    }
+
+    // 2. Branch validation
+    const branch = deployment.pipeline.branch?.trim();
+
+    if (!branch) {
+      logger.error(
+        {
+          deploymentId,
+          pipelineId: deployment.pipelineId,
+        },
+        "Pipeline branch is not configured"
+      );
+
+      throw new Error(
+        `Pipeline ${deployment.pipelineId} has no branch configured`
+      );
+    }
+
+    // 10. Log repository and branch
+    logger.info(
+      {
+        deploymentId,
+        repository,
+        branch,
+      },
+      "Deployment repository and branch validated"
+    );
+
+    // 3. Validate image name
+    const image = process.env.DOCKER_IMAGE?.trim();
 
     if (!image) {
+      logger.error("DOCKER_IMAGE environment variable is not configured");
       throw new Error("DOCKER_IMAGE is not configured");
     }
 
@@ -86,6 +152,14 @@ export const deploymentExecutor = {
       await workspaceService.prepare(deploymentId);
 
     let containerId: string | undefined;
+    let runtime:
+      | {
+          containerId: string;
+          containerName: string;
+          hostPort: number;
+          containerUrl: string;
+        }
+      | undefined;
 
     try {
       const previousDeployment =
@@ -97,7 +171,6 @@ export const deploymentExecutor = {
       //
       // Checkout
       //
-      await checkDeploymentCancellation(jobId);
       await throwIfCancellationRequested(jobId);
 
       await stageRunner.run(
@@ -113,7 +186,7 @@ export const deploymentExecutor = {
               deploymentId,
               repository,
               workspace,
-              deployment.pipeline.branch ?? "main"
+              branch
             ),
             config.deploymentTimeouts.checkoutMs,
             "Repository checkout timed out"
@@ -124,7 +197,6 @@ export const deploymentExecutor = {
       //
       // Build
       //
-      await checkDeploymentCancellation(jobId);
       await throwIfCancellationRequested(jobId);
 
       await stageRunner.run(
@@ -150,10 +222,9 @@ export const deploymentExecutor = {
       //
       // Deploy
       //
-      await checkDeploymentCancellation(jobId);
       await throwIfCancellationRequested(jobId);
 
-      const runtime = await stageRunner.run(
+      runtime = await stageRunner.run(
         deploymentId,
         DeploymentStage.DEPLOYING,
         async () => {
@@ -167,6 +238,11 @@ export const deploymentExecutor = {
               workspace,
               image,
               deploymentId,
+              {
+                path: deployment.project.healthCheckPath,
+                port: deployment.project.healthCheckPort,
+                startupTimeout: deployment.project.startupTimeout,
+              },
               jobId
             ),
             config.deploymentTimeouts.deployMs,
@@ -188,8 +264,13 @@ export const deploymentExecutor = {
       //
       // Verify
       //
-      await checkDeploymentCancellation(jobId);
       await throwIfCancellationRequested(jobId);
+
+      const deploymentRuntime = runtime;
+
+      if (!deploymentRuntime) {
+        throw new Error("Deployment runtime was not initialized");
+      }
 
       await stageRunner.run(
         deploymentId,
@@ -206,8 +287,11 @@ export const deploymentExecutor = {
 
           await proxyService.exposeDeployment(
             deploymentId,
-            runtime.containerName
+            deploymentRuntime.containerName
           );
+
+          // final cancellation barrier
+          await throwIfCancellationRequested(jobId);
 
           await deploymentRepository.update(deploymentId, {
             status: DeploymentStatus.SUCCESS,
@@ -227,10 +311,15 @@ export const deploymentExecutor = {
         }
       );
     } catch (error) {
+      // 5. Cancellation cleanup
       if (error instanceof DeploymentCancelledError) {
         logger.info(
-          { deploymentId },
-          "Deployment cancelled"
+          {
+            deploymentId,
+            jobId,
+            containerId,
+          },
+          "Deployment cancellation requested"
         );
 
         await deploymentLogService.append(
@@ -238,17 +327,29 @@ export const deploymentExecutor = {
           "Deployment cancelled by user"
         );
 
-        await deploymentRepository.update(
-          deploymentId,
-          {
-            status: DeploymentStatus.CANCELLED,
-            isHealthy: false,
-          }
-        );
+        try {
+          await cleanupCancelledDeployment(
+            runtime?.containerName
+          );
+        } catch (cleanupError) {
+          logger.warn(
+            { deploymentId, containerId, cleanupError },
+            "Failed executing cancellation cleanup handler"
+          );
+        }
 
-        return;
+        await deploymentRepository.update(
+  deploymentId,
+  {
+    status: DeploymentStatus.CANCELLED,
+    isHealthy: false,
+  }
+);
+
+throw error;
       }
 
+      // 6. Timeout cleanup
       if (error instanceof DeploymentTimeoutError) {
         logger.error(
           {
@@ -278,12 +379,15 @@ export const deploymentExecutor = {
           ? error.stack
           : undefined;
 
-      logger.error({
-        deploymentId,
-        containerId,
-        message,
-        stack,
-      });
+      logger.error(
+        {
+          deploymentId,
+          containerId,
+          message,
+          stack,
+        },
+        "Deployment execution failed with error"
+      );
 
       await this.failDeployment(
         deploymentId,
@@ -294,9 +398,15 @@ export const deploymentExecutor = {
 
       throw error;
     } finally {
-      await workspaceService.cleanup(
-        deploymentId
-      );
+      // 8. Workspace cleanup & 11. Wrap cleanup cleanly without any errors
+      try {
+        await workspaceService.cleanup(deploymentId);
+      } catch (workspaceError) {
+        logger.warn(
+          { deploymentId, workspaceError },
+          "Failed to clean up workspace successfully in finally block"
+        );
+      }
     }
   },
 };

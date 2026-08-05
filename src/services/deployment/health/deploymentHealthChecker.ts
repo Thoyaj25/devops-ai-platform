@@ -1,6 +1,7 @@
 import { JobStatus } from "@/generated/prisma";
 import { deploymentJobRepository } from "@/repositories/deploymentJobRepository";
 import { DeploymentCancelledError } from "@/services/deployment/errors/deploymentCancelledError";
+import { HealthCheckConfig } from "./healthCheckConfig";
 
 const sleep = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -8,11 +9,12 @@ const sleep = (ms: number) =>
 export class DeploymentHealthChecker {
   async check(
     containerName: string,
+    config: HealthCheckConfig,
     jobId?: string
   ): Promise<boolean> {
-    const maxAttempts = 30;
     const delayMs = 1000;
-    const url = `http://${containerName}:3000/api/health`;
+    const maxAttempts = Math.ceil((config.startupTimeout * 1000) / delayMs);
+    const url = `http://${containerName}:${config.port}${config.path}`;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       //
@@ -22,11 +24,7 @@ export class DeploymentHealthChecker {
         const job =
           await deploymentJobRepository.findById(jobId);
 
-        
-
         if (job?.status === JobStatus.CANCEL_REQUESTED) {
-          
-
           throw new DeploymentCancelledError();
         }
       }

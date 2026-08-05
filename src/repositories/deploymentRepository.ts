@@ -13,6 +13,9 @@ const deploymentInclude =
       select: {
         id: true,
         name: true,
+        healthCheckPort: true,
+        healthCheckPath: true,
+        startupTimeout: true,
       },
     },
 
