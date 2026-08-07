@@ -104,6 +104,26 @@ export async function runDeploymentWorker(): Promise<void> {
             job.id
           );
 
+          const latestJob =
+            await deploymentJobService.findById(
+              job.id
+            );
+
+          if (
+            latestJob?.status ===
+            JobStatus.CANCELLED
+          ) {
+            logger.info(
+              {
+                jobId: job.id,
+                deploymentId: job.deploymentId,
+              },
+              "Skipping completion because job was cancelled"
+            );
+
+            continue;
+          }
+
           await deploymentJobService.updateJob(
             job.id,
             {

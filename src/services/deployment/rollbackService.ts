@@ -7,6 +7,7 @@ import { DockerDeploymentProvider } from "@/services/providers";
 import { proxyService } from "@/services/proxy/proxyService";
 
 import { deploymentLogService } from "./logs/deploymentLogService";
+import { deploymentHealthChecker } from "@/services/deployment/health/deploymentHealthChecker";
 
 
 export const rollbackService = {
@@ -114,6 +115,16 @@ export const rollbackService = {
           "Previous container is not running"
         );
       }
+      
+      await deploymentHealthChecker.check(
+  `dep-${previousDeploymentId}`,
+  {
+    path: previous.project.healthCheckPath,
+    port: previous.project.healthCheckPort,
+    startupTimeout: previous.project.startupTimeout,
+  },
+  undefined
+);
 
 
 

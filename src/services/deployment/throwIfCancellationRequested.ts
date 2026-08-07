@@ -1,9 +1,5 @@
-import {
-  JobStatus,
-  DeploymentStatus,
-} from "@/generated/prisma";
+import { JobStatus } from "@/generated/prisma";
 import { deploymentJobService } from "./deploymentJobService";
-import { deploymentService } from "./deploymentService";
 import { DeploymentCancelledError } from "./errors/deploymentCancelledError";
 
 export async function throwIfCancellationRequested(
@@ -16,12 +12,6 @@ export async function throwIfCancellationRequested(
   }
 
   if (job.status === JobStatus.CANCEL_REQUESTED) {
-    await deploymentJobService.markCancelled(jobId);
-    await deploymentService.updateStatus(
-      job.deploymentId,
-      DeploymentStatus.CANCELLED
-    );
-
     throw new DeploymentCancelledError();
   }
 }
