@@ -157,13 +157,11 @@ export class DockerDeploymentProvider
   containerId
 );
 
-// Wait for Docker HEALTHCHECK to report healthy
 await dockerContainerService.waitHealthy(
-  containerId,
+  containerName,
   healthCheck.startupTimeout
 );
 
-// Verify the application endpoint
 await deploymentHealthChecker.check(
   containerName,
   healthCheck,
