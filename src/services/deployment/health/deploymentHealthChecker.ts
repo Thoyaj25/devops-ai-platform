@@ -3,6 +3,7 @@ import { deploymentJobRepository } from "@/repositories/deploymentJobRepository"
 import { DeploymentCancelledError } from "@/services/deployment/errors/deploymentCancelledError";
 import { HealthCheckConfig } from "./healthCheckConfig";
 
+
 const sleep = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -14,7 +15,7 @@ export class DeploymentHealthChecker {
   ): Promise<boolean> {
     const delayMs = 1000;
     const maxAttempts = Math.ceil((config.startupTimeout * 1000) / delayMs);
-    const url = `http://${containerName}:${config.port}${config.path}`;
+  
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       //
@@ -30,27 +31,31 @@ export class DeploymentHealthChecker {
       }
 
       try {
-        const response = await fetch(url);
+  const url =
+  `http://${containerName}:${config.port}${config.path}`;
 
-        if (response.ok) {
-          console.log(
-            `[HealthCheck] ${containerName} is healthy after ${attempt} attempt(s).`
-          );
-          return true;
-        }
+const response = await fetch(url);
 
-        console.log(
-          `[HealthCheck] Attempt ${attempt}: HTTP ${response.status}`
-        );
-      } catch (error) {
-        console.log(
-          `[HealthCheck] Attempt ${attempt}: ${
-            error instanceof Error
-              ? error.message
-              : String(error)
-          }`
-        );
-      }
+if (response.ok) {
+  console.log(
+    `[HealthCheck] ${containerName} responded successfully after ${attempt} attempt(s).`
+  );
+
+  return true;
+}
+
+console.log(
+  `[HealthCheck] Attempt ${attempt}: HTTP ${response.status}`
+);
+} catch (error) {
+  console.log(
+    `[HealthCheck] Attempt ${attempt}: ${
+      error instanceof Error
+        ? error.message
+        : String(error)
+    }`
+  );
+}
 
       await sleep(delayMs);
     }

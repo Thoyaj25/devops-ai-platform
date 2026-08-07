@@ -132,12 +132,20 @@ export const dockerContainerService = {
     const data = JSON.parse(result.stdout)[0];
 
     return {
-      id: data.Id,
-      name: data.Name.replace("/", ""),
-      image: data.Config.Image,
-      status: data.State.Status,
-      running: data.State.Running,
-    };
+  id: data.Id,
+  name: data.Name.replace("/", ""),
+  image: data.Config.Image,
+  status: data.State.Status,
+  running: data.State.Running,
+
+  health: data.State.Health
+    ? {
+        status: data.State.Health.Status,
+        failingStreak: data.State.Health.FailingStreak,
+        log: data.State.Health.Log,
+      }
+    : undefined,
+};
 
   },
 
@@ -174,6 +182,38 @@ export const dockerContainerService = {
     }
 
     throw new Error("Container failed to reach running state");
+
+  },
+
+
+
+  async waitHealthy(id: string, timeoutSeconds = 60) {
+
+    for (let i = 0; i < timeoutSeconds; i++) {
+
+      const info = await this.inspect(id);
+
+      if (!info.running) {
+        throw new Error("Container stopped before becoming healthy.");
+      }
+
+      if (!info.health) {
+        return;
+      }
+
+      if (info.health.status === "healthy") {
+        return;
+      }
+
+      if (info.health.status === "unhealthy") {
+        throw new Error("Container became unhealthy.");
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+    }
+
+    throw new Error("Timed out waiting for Docker HEALTHCHECK.");
 
   },
 

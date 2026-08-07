@@ -154,14 +154,21 @@ export class DockerDeploymentProvider
       });
 
     await dockerContainerService.waitRunning(
-      containerId
-    );
+  containerId
+);
 
-    await deploymentHealthChecker.check(
-      containerName,
-      healthCheck,
-      jobId
-    );
+// Wait for Docker HEALTHCHECK to report healthy
+await dockerContainerService.waitHealthy(
+  containerId,
+  healthCheck.startupTimeout
+);
+
+// Verify the application endpoint
+await deploymentHealthChecker.check(
+  containerName,
+  healthCheck,
+  jobId
+);
 
     const containerUrl = `http://${deploymentId}.${this.domain}`;
 
