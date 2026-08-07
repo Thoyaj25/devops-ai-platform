@@ -17,6 +17,8 @@ type ApiResponse<T> = {
 };
 
 export default function DeploymentDashboard() {
+  console.log("🚨 DEPLOYMENT DASHBOARD RENDER 🚨", Date.now());
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] =
     useState("");

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { DeploymentStatus } from "@/generated/prisma";
 
@@ -51,9 +51,12 @@ const ACTIVE_DEPLOYMENT_STATES: DeploymentStatus[] = [
 export default function DeploymentHistory({
   projectId,
 }: Props) {
+  console.log("[DeploymentHistory] render", projectId);
+
   const [deployments, setDeployments] = useState<Deployment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -87,10 +90,44 @@ export default function DeploymentHistory({
         }
 
         if (!mounted) {
-          return;
-        }
+  return;
+}
 
-        setDeployments(result.data ?? []);
+const deploymentList = result.data ?? [];
+
+setDeployments(deploymentList);
+
+const hasActiveDeployment =
+  deploymentList.some((deployment) =>
+    ACTIVE_DEPLOYMENT_STATES.includes(
+      deployment.status
+    )
+  );
+  if (hasActiveDeployment) {
+  if (!pollingRef.current) {
+    pollingRef.current = setInterval(() => {
+      loadDeployments();
+    }, 5000);
+
+    console.log(
+      "[DeploymentHistory] Started polling"
+    );
+  }
+} else {
+  if (pollingRef.current) {
+    clearInterval(pollingRef.current);
+    pollingRef.current = null;
+
+    console.log(
+      "[DeploymentHistory] Stopped polling"
+    );
+  }
+}
+
+console.log(
+  "[DeploymentHistory] Active deployment:",
+  hasActiveDeployment
+);
       } catch (err) {
         console.error(err);
 
@@ -112,11 +149,13 @@ export default function DeploymentHistory({
 
     loadDeployments();
 
-const interval = setInterval(loadDeployments, 5000);
-
 return () => {
   mounted = false;
-  clearInterval(interval);
+
+  if (pollingRef.current) {
+    clearInterval(pollingRef.current);
+    pollingRef.current = null;
+  }
 };
   }, [projectId]);
 
