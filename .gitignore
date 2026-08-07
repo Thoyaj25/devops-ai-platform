@@ -56,3 +56,5 @@ nginx-final.txt
 # Temporary TypeScript backups
 *.ts.backup
 .next/
+# Runtime generated deployment nginx configs
+nginx/conf.d/*.conf
