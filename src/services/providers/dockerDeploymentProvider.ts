@@ -46,10 +46,27 @@ export class DockerDeploymentProvider
     );
 
     await dockerClient.gitClone(
-      repository,
-      workspace,
-      branch
-    );
+  repository,
+  workspace,
+  branch,
+  {
+    onStdout: async (line) => {
+      await deploymentLogService.append(
+        deploymentId,
+        line,
+        "CHECKOUT"
+      );
+    },
+
+    onStderr: async (line) => {
+      await deploymentLogService.append(
+        deploymentId,
+        line,
+        "CHECKOUT"
+      );
+    },
+  }
+);
 
     await this.log(
       deploymentId,
@@ -80,10 +97,27 @@ export class DockerDeploymentProvider
     );
 
     await dockerImageService.build(
-      workspace,
-      tag,
-      jobId
-    );
+    workspace,
+    tag,
+    jobId,
+    {
+        onStdout: async (line) => {
+            await deploymentLogService.append(
+                deploymentId,
+                line,
+                "BUILD"
+            );
+        },
+
+        onStderr: async (line) => {
+            await deploymentLogService.append(
+                deploymentId,
+                line,
+                "BUILD"
+            );
+        },
+    }
+);
 
     await this.log(
       deploymentId,

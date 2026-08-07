@@ -11,6 +11,12 @@ export const dockerClient = {
   options?: {
     cwd?: string;
     jobId?: string;
+    onStdout?: (
+      line: string
+    ) => void | Promise<void>;
+    onStderr?: (
+      line: string
+    ) => void | Promise<void>;
   }
 ) {
 
@@ -26,7 +32,13 @@ export const dockerClient = {
     process.cwd(),
 
   jobId:
-    options?.jobId
+    options?.jobId,
+
+  onStdout:
+    options?.onStdout,
+
+  onStderr:
+    options?.onStderr,
 
 });
 
@@ -52,25 +64,40 @@ export const dockerClient = {
 
 
   async gitClone(
-    repository: string,
-    workspace: string,
-    branch: string
-  ) {
+  repository: string,
+  workspace: string,
+  branch: string,
+  options?: {
+    onStdout?: (
+      line: string
+    ) => void | Promise<void>;
+    onStderr?: (
+      line: string
+    ) => void | Promise<void>;
+  }
+) {
 
 
     const result =
-      await this.run(
-        "git",
-        [
-          "clone",
-          "--depth",
-          "1",
-          "--branch",
-          branch,
-          repository,
-          workspace
-        ]
-      );
+  await this.run(
+    "git",
+    [
+      "clone",
+      "--depth",
+      "1",
+      "--branch",
+      branch,
+      repository,
+      workspace
+    ],
+    {
+      onStdout:
+        options?.onStdout,
+
+      onStderr:
+        options?.onStderr,
+    }
+  );
 
 
     if(result.exitCode !== 0) {

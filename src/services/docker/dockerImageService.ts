@@ -2,10 +2,18 @@ import { dockerClient } from "./dockerClient";
 
 export const dockerImageService = {
   async build(
-    workspace: string,
-    image: string,
-    jobId?: string
-  ): Promise<void> {
+  workspace: string,
+  image: string,
+  jobId?: string,
+  options?: {
+    onStdout?: (
+      line: string
+    ) => void | Promise<void>;
+    onStderr?: (
+      line: string
+    ) => void | Promise<void>;
+  }
+): Promise<void> {
     const buildArgs: string[] = ["build"];
 
     // Enable only for testing
@@ -20,13 +28,19 @@ export const dockerImageService = {
     );
 
     const result = await dockerClient.run(
-      "docker",
-      buildArgs,
-      {
-        cwd: workspace,
-        jobId,
-      }
-    );
+  "docker",
+  buildArgs,
+  {
+    cwd: workspace,
+    jobId,
+
+    onStdout:
+      options?.onStdout,
+
+    onStderr:
+      options?.onStderr,
+  }
+);
 
     if (result.exitCode !== 0) {
       throw new Error(
