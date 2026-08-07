@@ -3,35 +3,46 @@ import { dockerClient } from "./dockerClient";
 export const dockerContainerService = {
 
   async run(options: {
-    name: string;
-    image: string;
-    network: string;
-  }) {
+  name: string;
+  image: string;
+  network: string;
+  labels?: Record<string, string>;
+}) {
 
-    const result = await dockerClient.run(
-      "docker",
-      [
-        "run",
-        "-d",
+    const args = [
+  "run",
+  "-d",
 
-        "--name",
-        options.name,
+  "--name",
+  options.name,
 
-        "--network",
-        options.network,
+  "--network",
+  options.network,
 
-        "--network-alias",
-        options.name,
+  "--network-alias",
+  options.name,
 
-        "--restart",
-        "unless-stopped",
+  "--restart",
+  "unless-stopped",
+];
 
-        "-e",
-        "HOSTNAME=0.0.0.0",
+for (const [key, value] of Object.entries(options.labels ?? {})) {
+  args.push(
+    "--label",
+    `${key}=${value}`
+  );
+}
 
-        options.image,
-      ]
-    );
+args.push(
+  "-e",
+  "HOSTNAME=0.0.0.0",
+  options.image
+);
+
+const result = await dockerClient.run(
+  "docker",
+  args
+);
 
     if (result.exitCode !== 0) {
       throw new Error(result.stderr);

@@ -147,11 +147,15 @@ export class DockerDeploymentProvider
     );
 
     const containerId =
-      await dockerContainerService.run({
-        name: containerName,
-        image: fullImage,
-        network: "marketsphere",
-      });
+  await dockerContainerService.run({
+    name: containerName,
+    image: fullImage,
+    network: "marketsphere",
+    labels: {
+      "marketsphere.managed": "true",
+      "marketsphere.deployment": deploymentId,
+    },
+  });
 
     await dockerContainerService.waitRunning(
   containerId
