@@ -15,6 +15,7 @@ import { deploymentRollbackService } from "./deploymentRollbackService";
 import { stageRunner } from "./stageRunner";
 import { DeploymentStage } from "./stages";
 import { workspaceService } from "./workspace/workspaceService";
+import { checkDeploymentCancellation } from "./cancellationService";
 import { throwIfCancellationRequested } from "./throwIfCancellationRequested";
 import { DeploymentCancelledError } from "./errors/deploymentCancelledError";
 import { DeploymentTimeoutError } from "./errors/deploymentTimeoutError";
@@ -171,6 +172,7 @@ export const deploymentExecutor = {
       //
       // Checkout
       //
+      await checkDeploymentCancellation(jobId);
       await throwIfCancellationRequested(jobId);
 
       await stageRunner.run(
@@ -197,6 +199,7 @@ export const deploymentExecutor = {
       //
       // Build
       //
+      await checkDeploymentCancellation(jobId);
       await throwIfCancellationRequested(jobId);
 
       await stageRunner.run(
@@ -227,6 +230,7 @@ export const deploymentExecutor = {
       //
       // Deploy
       //
+      await checkDeploymentCancellation(jobId);
       await throwIfCancellationRequested(jobId);
 
       runtime = await stageRunner.run(
@@ -269,6 +273,7 @@ export const deploymentExecutor = {
       //
       // Verify
       //
+      await checkDeploymentCancellation(jobId);
       await throwIfCancellationRequested(jobId);
 
       const deploymentRuntime = runtime;
@@ -296,6 +301,7 @@ export const deploymentExecutor = {
           );
 
           // final cancellation barrier
+          await checkDeploymentCancellation(jobId);
           await throwIfCancellationRequested(jobId);
 
           await deploymentRepository.update(deploymentId, {
