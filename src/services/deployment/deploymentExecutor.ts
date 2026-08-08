@@ -146,6 +146,8 @@ export const deploymentExecutor = {
       throw new Error("DOCKER_IMAGE is not configured");
     }
 
+    const imageName = `${image}:${deploymentId}`;
+
     const provider =
       new DockerDeploymentProvider();
 
@@ -338,10 +340,11 @@ export const deploymentExecutor = {
           "Deployment cancelled by user"
         );
 
-        try {
-          await cleanupCancelledDeployment(
-            runtime?.containerName
-          );
+                  try {
+            await cleanupCancelledDeployment(
+              runtime?.containerName,
+              imageName
+            );
         } catch (cleanupError) {
           logger.warn(
             { deploymentId, containerId, cleanupError },
