@@ -222,7 +222,6 @@ export const deploymentExecutor = {
             "Docker build timed out"
           );
 
-          const imageName = `${image}:${deploymentId}`;
           await deploymentRepository.update(deploymentId, {
             image: imageName,
           });
