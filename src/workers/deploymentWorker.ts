@@ -1,5 +1,4 @@
 import { JobStatus } from "@/generated/prisma";
-
 import { logger } from "@/lib/logger";
 
 import { deploymentExecutor } from "@/services/deployment/deploymentExecutor";
@@ -145,28 +144,33 @@ export async function runDeploymentWorker(): Promise<void> {
            * Deployment cancellation
            */
           if (
-            error instanceof DeploymentCancelledError
-          ) {
-            await deploymentJobService.updateJob(
-              job.id,
-              {
-                status: JobStatus.CANCELLED,
-                completedAt: new Date(),
-                error: "Cancelled by user",
-              }
-            );
+  error instanceof DeploymentCancelledError
+) {
 
-            logger.info(
-              {
-                workerId: WORKER_ID,
-                jobId: job.id,
-                deploymentId: job.deploymentId,
-              },
-              "Deployment cancelled"
-            );
+  await deploymentJobService.updateJob(
+    job.id,
+    {
+      status: JobStatus.CANCELLED,
+      completedAt: new Date(),
+      error: "Cancelled by user",
+    }
+  );
 
-            continue;
-          }
+
+
+
+
+  logger.info(
+    {
+      workerId: WORKER_ID,
+      jobId: job.id,
+      deploymentId: job.deploymentId,
+    },
+    "Deployment cancelled"
+  );
+
+  continue;
+}
 
           /**
            * Normal deployment failure

@@ -1,38 +1,51 @@
 import {
-  BadRequestError,
   NotFoundError,
+  BadRequestError,
 } from "@/lib/api/errors";
 
 import {
-  CreateDeploymentInput,
+  type CreateDeploymentInput,
 } from "@/lib/validation/deployment";
 
 import {
   DeploymentStatus,
 } from "@/generated/prisma";
 
-import { auditService } from "@/services/audit/auditService";
-import { deploymentJobService } from "@/services/deployment/deploymentJobService";
-
 import { deploymentRepository } from "@/repositories/deploymentRepository";
 import { environmentRepository } from "@/repositories/environmentRepository";
 import { pipelineRepository } from "@/repositories/pipelineRepository";
 import { projectRepository } from "@/repositories/projectRepository";
 
+import { deploymentJobService } from "@/services/deployment/deploymentJobService";
+import { auditService } from "@/services/audit/auditService";
+
 export const deploymentService = {
-  async getEnvironmentDeployments(environmentId: string) {
-    return deploymentRepository.findAllByEnvironment(environmentId);
+  async getEnvironmentDeployments(
+    environmentId: string
+  ) {
+    return deploymentRepository.findAllByEnvironment(
+      environmentId
+    );
   },
 
-  async getProjectDeployments(projectId: string) {
-    return deploymentRepository.findAllByProject(projectId);
+  async getProjectDeployments(
+    projectId: string
+  ) {
+    return deploymentRepository.findAllByProject(
+      projectId
+    );
   },
 
-  async getDeployment(id: string) {
-    const deployment = await deploymentRepository.findById(id);
+  async getDeployment(
+    id: string
+  ) {
+    const deployment =
+      await deploymentRepository.findById(id);
 
     if (!deployment) {
-      throw new NotFoundError("Deployment not found");
+      throw new NotFoundError(
+        "Deployment not found"
+      );
     }
 
     return deployment;
@@ -47,14 +60,22 @@ export const deploymentService = {
     });
   },
 
+  /**
+   * Returns the most recent deployment that can be
+   * used as a rollback target.
+   */
   async getPreviousRollbackTarget(
     deploymentId: string
   ) {
     const deployment =
-      await deploymentRepository.findById(deploymentId);
+      await deploymentRepository.findById(
+        deploymentId
+      );
 
     if (!deployment) {
-      throw new NotFoundError("Deployment not found");
+      throw new NotFoundError(
+        "Deployment not found"
+      );
     }
 
     return deploymentRepository.findPreviousSuccessfulDeployment(
@@ -63,11 +84,46 @@ export const deploymentService = {
     );
   },
 
-  /**
-   * Validate every dependency before
-   * creating Deployment or DeploymentJob.
-   */
-  async validateDeploymentPrerequisites(
+  async initiateDeployment(
+    input: CreateDeploymentInput,
+    ownerId: string
+  ) {
+    const deployment =
+      await this.createDeployment(
+        input,
+        ownerId
+      );
+
+    try {
+      await deploymentJobService.createJob(
+        deployment.id
+      );
+
+      await auditService.log({
+        action: "DEPLOYMENT_QUEUED",
+        resource: "DEPLOYMENT",
+        userId: ownerId,
+
+        metadata: {
+          resourceId: deployment.id,
+          status: deployment.status,
+        },
+      });
+    } catch (error) {
+      await deploymentRepository.update(
+        deployment.id,
+        {
+          status: DeploymentStatus.FAILED,
+        }
+      );
+
+      throw error;
+    }
+
+    return deployment;
+  },
+
+  async createDeployment(
     input: CreateDeploymentInput,
     ownerId: string
   ) {
@@ -78,7 +134,9 @@ export const deploymentService = {
       );
 
     if (!project) {
-      throw new NotFoundError("Project not found");
+      throw new NotFoundError(
+        "Project not found"
+      );
     }
 
     const environment =
@@ -87,10 +145,15 @@ export const deploymentService = {
       );
 
     if (!environment) {
-      throw new NotFoundError("Environment not found");
+      throw new NotFoundError(
+        "Environment not found"
+      );
     }
 
-    if (environment.projectId !== project.id) {
+    if (
+      environment.projectId !==
+      input.projectId
+    ) {
       throw new BadRequestError(
         "Environment does not belong to project"
       );
@@ -102,93 +165,19 @@ export const deploymentService = {
       );
 
     if (!pipeline) {
-      throw new NotFoundError("Pipeline not found");
+      throw new NotFoundError(
+        "Pipeline not found"
+      );
     }
 
-    if (pipeline.projectId !== project.id) {
+    if (
+      pipeline.projectId !==
+      input.projectId
+    ) {
       throw new BadRequestError(
         "Pipeline does not belong to project"
       );
     }
-
-    //
-    // NEW VALIDATION
-    //
-    if (
-      !pipeline.repository ||
-      pipeline.repository.trim().length === 0
-    ) {
-      throw new BadRequestError(
-        "Pipeline repository is not configured"
-      );
-    }
-
-    if (
-      !pipeline.branch ||
-      pipeline.branch.trim().length === 0
-    ) {
-      throw new BadRequestError(
-        "Pipeline branch is not configured"
-      );
-    }
-
-    return {
-      project,
-      environment,
-      pipeline,
-    };
-  },
-
-  async initiateDeployment(
-    input: CreateDeploymentInput,
-    ownerId: string
-  ) {
-    await this.validateDeploymentPrerequisites(
-      input,
-      ownerId
-    );
-
-    const deployment =
-      await deploymentRepository.create({
-        ...input,
-      });
-
-    try {
-      await deploymentJobService.createJob(
-        deployment.id
-      );
-
-      await auditService.log({
-        action: "DEPLOYMENT_QUEUED",
-        resource: "DEPLOYMENT",
-        userId: ownerId,
-        metadata: {
-          resourceId: deployment.id,
-          status: deployment.status,
-        },
-      });
-
-      return deployment;
-    } catch (error) {
-      await deploymentRepository.update(
-        deployment.id,
-        {
-          status: DeploymentStatus.FAILED,
-        }
-      );
-
-      throw error;
-    }
-  },
-
-  async createDeployment(
-    input: CreateDeploymentInput,
-    ownerId: string
-  ) {
-    await this.validateDeploymentPrerequisites(
-      input,
-      ownerId
-    );
 
     return deploymentRepository.create({
       ...input,
