@@ -103,42 +103,16 @@ export async function runDeploymentWorker(): Promise<void> {
             job.id
           );
 
-          const latestJob =
-            await deploymentJobService.findById(
-              job.id
-            );
 
-          if (
-            latestJob?.status ===
-            JobStatus.CANCELLED
-          ) {
-            logger.info(
-              {
-                jobId: job.id,
-                deploymentId: job.deploymentId,
-              },
-              "Skipping completion because job was cancelled"
-            );
 
-            continue;
-          }
-
-          await deploymentJobService.updateJob(
-            job.id,
-            {
-              status: JobStatus.COMPLETED,
-              completedAt: new Date(),
-              error: null,
-            }
-          );
-
-          logger.info(
-            {
-              workerId: WORKER_ID,
-              jobId: job.id,
-            },
-            "Deployment completed successfully"
-          );
+logger.info(
+  {
+    workerId: WORKER_ID,
+    jobId: job.id,
+    deploymentId: job.deploymentId,
+  },
+  "Deployment completed successfully"
+);
         } catch (error) {
           /**
            * Deployment cancellation
@@ -146,19 +120,9 @@ export async function runDeploymentWorker(): Promise<void> {
           if (
   error instanceof DeploymentCancelledError
 ) {
-
-  await deploymentJobService.updateJob(
-    job.id,
-    {
-      status: JobStatus.CANCELLED,
-      completedAt: new Date(),
-      error: "Cancelled by user",
-    }
+  await deploymentJobService.markCancelled(
+    job.id
   );
-
-
-
-
 
   logger.info(
     {

@@ -542,6 +542,22 @@ findPreviousSuccessfulDeployment(
 
   },
 
+  markSuccessIfHealthChecking(
+  id: string
+) {
+
+  return prisma.$executeRaw`
+    UPDATE "Deployment"
+    SET
+      status = 'SUCCESS'::"DeploymentStatus",
+      "isHealthy" = true
+    WHERE
+      id = ${id}
+      AND status = 'HEALTH_CHECKING'::"DeploymentStatus"
+  `;
+
+},
+
 
   updateLogs(
     id:string,

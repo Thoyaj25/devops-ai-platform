@@ -59,6 +59,13 @@ export const deploymentService = {
       status,
     });
   },
+  async markSuccessIfHealthChecking(
+  id: string
+) {
+  return deploymentRepository.markSuccessIfHealthChecking(
+    id
+  );
+},
 
   /**
    * Returns the most recent deployment that can be

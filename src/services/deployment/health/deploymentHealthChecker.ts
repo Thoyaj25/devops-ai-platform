@@ -3,7 +3,6 @@ import { deploymentJobRepository } from "@/repositories/deploymentJobRepository"
 import { DeploymentCancelledError } from "@/services/deployment/errors/deploymentCancelledError";
 import { HealthCheckConfig } from "./healthCheckConfig";
 
-
 const sleep = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -14,48 +13,49 @@ export class DeploymentHealthChecker {
     jobId?: string
   ): Promise<boolean> {
     const delayMs = 1000;
-    const maxAttempts = Math.ceil((config.startupTimeout * 1000) / delayMs);
-  
+    const maxAttempts = Math.ceil(
+      (config.startupTimeout * 1000) / delayMs
+    );
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       //
-      // Check for cancellation before every health check
+      // Check for cancellation before every health check.
       //
       if (jobId) {
-        const job =
-          await deploymentJobRepository.findById(jobId);
+        const job = await deploymentJobRepository.findById(jobId);
 
         if (job?.status === JobStatus.CANCEL_REQUESTED) {
+          console.log(
+            `[HealthCheck] Deployment job ${jobId} cancellation requested.`
+          );
+
           throw new DeploymentCancelledError();
         }
       }
 
+      const url = `http://${containerName}:${config.port}${config.path}`;
+
       try {
-  const url =
-  `http://${containerName}:${config.port}${config.path}`;
+        const response = await fetch(url);
 
-const response = await fetch(url);
+        if (response.ok) {
+          console.log(
+            `[HealthCheck] ${containerName} responded successfully after ${attempt} attempt(s).`
+          );
 
-if (response.ok) {
-  console.log(
-    `[HealthCheck] ${containerName} responded successfully after ${attempt} attempt(s).`
-  );
+          return true;
+        }
 
-  return true;
-}
-
-console.log(
-  `[HealthCheck] Attempt ${attempt}: HTTP ${response.status}`
-);
-} catch (error) {
-  console.log(
-    `[HealthCheck] Attempt ${attempt}: ${
-      error instanceof Error
-        ? error.message
-        : String(error)
-    }`
-  );
-}
+        console.log(
+          `[HealthCheck] Attempt ${attempt}: HTTP ${response.status}`
+        );
+      } catch (error) {
+        console.log(
+          `[HealthCheck] Attempt ${attempt}: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
 
       await sleep(delayMs);
     }

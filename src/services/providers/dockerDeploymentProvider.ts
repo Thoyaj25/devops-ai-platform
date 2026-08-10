@@ -12,6 +12,8 @@ import { dockerImageService } from "@/services/docker/dockerImageService";
 
 import { deploymentHealthChecker } from "@/services/deployment/health/deploymentHealthChecker";
 import { HealthCheckConfig } from "@/services/deployment/health/healthCheckConfig";
+import { DeploymentHealthCheckError } from "@/services/deployment/errors/deploymentHealthCheckError";
+import { DeploymentCancelledError } from "@/services/deployment/errors/deploymentCancelledError";
 
 export class DockerDeploymentProvider
   implements DeploymentProvider {
@@ -166,11 +168,25 @@ await dockerContainerService.waitHealthy(
   healthCheck.startupTimeout
 );
 
-await deploymentHealthChecker.check(
-  containerName,
-  healthCheck,
-  jobId
-);
+try {
+  await deploymentHealthChecker.check(
+    containerName,
+    healthCheck,
+    jobId
+  );
+} catch (error) {
+  if (error instanceof DeploymentCancelledError) {
+    throw error;
+  }
+
+  throw new DeploymentHealthCheckError(
+    error instanceof Error
+      ? error.message
+      : `Deployment '${containerName}' failed health checks`,
+    containerId,
+    containerName
+  );
+}
 
     const containerUrl = `http://${deploymentId}.${this.domain}`;
 

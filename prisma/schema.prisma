@@ -35,13 +35,13 @@ model Project {
   description String?
   status      ProjectStatus @default(ACTIVE)
 
-  ownerId     String
-  clusterId   String?
+  ownerId   String
+  clusterId String?
 
   // Deployment configuration
   healthCheckPort Int    @default(3000)
   healthCheckPath String @default("/api/health")
-  startupTimeout Int     @default(30)
+  startupTimeout  Int    @default(30)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
@@ -63,6 +63,8 @@ model Environment {
 
   project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   deployments Deployment[]
+
+  @@unique([projectId, name])
 }
 
 model Pipeline {
@@ -116,17 +118,17 @@ model DeploymentJob {
   deploymentId String
   status       JobStatus @default(PENDING)
 
-  attempts     Int       @default(0)
-  error        String?
+  attempts Int     @default(0)
+  error    String?
 
-  nextRetryAt  DateTime?
-  startedAt    DateTime?
-  completedAt  DateTime?
+  nextRetryAt DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
 
   cancelRequestedAt DateTime?
 
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @default(now()) @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   deployment Deployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
 

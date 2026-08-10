@@ -155,6 +155,28 @@ export const deploymentJobService = {
     );
 
   },
+  async markCompletedIfRunning(
+  id: string
+) {
+  requireId(id);
+
+  return deploymentJobRepository.markCompletedIfRunning(
+    id
+  );
+},
+async completeDeploymentIfRunning(
+  jobId: string,
+  deploymentId: string
+) {
+  requireId(jobId);
+  requireId(deploymentId);
+
+  return deploymentJobRepository.completeDeploymentIfRunning(
+    jobId,
+    deploymentId
+  );
+},
+
 
 
 

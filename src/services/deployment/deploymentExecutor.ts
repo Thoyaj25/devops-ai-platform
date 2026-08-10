@@ -5,6 +5,8 @@ import { withTimeout } from "@/lib/utils/timeout";
 import { DeploymentStatus } from "@/generated/prisma";
 
 import { deploymentRepository } from "@/repositories/deploymentRepository";
+import { deploymentJobService } from "@/services/deployment/deploymentJobService";
+
 
 import { DockerDeploymentProvider } from "@/services/providers";
 import { proxyService } from "@/services/proxy/proxyService";
@@ -19,6 +21,7 @@ import { checkDeploymentCancellation } from "./cancellationService";
 import { throwIfCancellationRequested } from "./throwIfCancellationRequested";
 import { DeploymentCancelledError } from "./errors/deploymentCancelledError";
 import { DeploymentTimeoutError } from "./errors/deploymentTimeoutError";
+import { DeploymentHealthCheckError } from "./errors/deploymentHealthCheckError";
 import { cleanupCancelledDeployment } from "./cancellationCleanup";
 
 export const deploymentExecutor = {
@@ -54,9 +57,10 @@ export const deploymentExecutor = {
 
     try {
       await deploymentRepository.update(deploymentId, {
-        status: DeploymentStatus.FAILED,
-        isHealthy: false,
-      });
+  status: DeploymentStatus.FAILED,
+  isHealthy: false,
+  errorMessage: logMessage,
+});
     } catch (dbError) {
       logger.error(
         { deploymentId, dbError },
@@ -301,25 +305,46 @@ export const deploymentExecutor = {
             deploymentRuntime.containerName
           );
 
-          // final cancellation barrier
-          await checkDeploymentCancellation(jobId);
-          await throwIfCancellationRequested(jobId);
 
-          await deploymentRepository.update(deploymentId, {
-            status: DeploymentStatus.SUCCESS,
-            isHealthy: true,
-          });
+// Final cancellation barrier.
+//
+// The Deployment SUCCESS transition and
+// DeploymentJob COMPLETED transition happen atomically.
+await checkDeploymentCancellation(jobId);
+await throwIfCancellationRequested(jobId);
 
-          await deploymentLogService.append(
-            deploymentId,
-            `Deployment available at http://${deploymentId}.${config.deploymentDomain}`
-          );
+const finalized =
+  await deploymentJobService.completeDeploymentIfRunning(
+    jobId,
+    deploymentId
+  );
 
-          if (previousDeployment) {
-            await deploymentCleanupService.cleanupPreviousDeployment(
-              previousDeployment.id
-            );
-          }
+if (!finalized) {
+  throw new DeploymentCancelledError();
+}
+
+await deploymentLogService.append(
+  deploymentId,
+  `Deployment available at http://${deploymentId}.${config.deploymentDomain}`
+);
+
+if (previousDeployment) {
+  try {
+    await deploymentCleanupService.cleanupPreviousDeployment(
+      previousDeployment.id
+    );
+  } catch (cleanupError) {
+    logger.warn(
+      {
+        deploymentId,
+        previousDeploymentId: previousDeployment.id,
+        cleanupError,
+      },
+      "Previous deployment cleanup failed after successful deployment"
+    );
+  }
+}
+
         }
       );
     } catch (error) {
@@ -339,11 +364,11 @@ export const deploymentExecutor = {
           "Deployment cancelled by user"
         );
 
-                  try {
-            await cleanupCancelledDeployment(
-              runtime?.containerName,
-              imageName
-            );
+        try {
+          await cleanupCancelledDeployment(
+            runtime?.containerName,
+            imageName
+          );
         } catch (cleanupError) {
           logger.warn(
             { deploymentId, containerId, cleanupError },
@@ -352,14 +377,36 @@ export const deploymentExecutor = {
         }
 
         await deploymentRepository.update(
-  deploymentId,
-  {
-    status: DeploymentStatus.CANCELLED,
-    isHealthy: false,
-  }
-);
+          deploymentId,
+          {
+            status: DeploymentStatus.CANCELLED,
+            isHealthy: false,
+          }
+        );
 
-throw error;
+        throw error;
+      }
+
+      // 6. Health-check failure cleanup
+      if (error instanceof DeploymentHealthCheckError) {
+        containerId = error.containerId;
+        logger.error(
+          {
+            deploymentId,
+            containerId: error.containerId,
+            containerName: error.containerName,
+            message: error.message,
+          },
+          "Deployment failed health checks"
+        );
+
+        await this.failDeployment(
+          deploymentId,
+          containerId,
+          `Deployment failed health checks:\n${error.message}`
+        );
+
+        throw error;
       }
 
       // 6. Timeout cleanup

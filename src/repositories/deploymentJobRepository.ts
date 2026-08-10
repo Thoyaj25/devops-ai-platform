@@ -1,7 +1,10 @@
+
 import {
   JobStatus,
+  DeploymentStatus,
   Prisma,
 } from "@/generated/prisma";
+
 import { prisma } from "@/lib/prisma";
 
 const defaultOrder: Prisma.DeploymentJobOrderByWithRelationInput = {
@@ -77,8 +80,6 @@ export const deploymentJobRepository = {
     id: string,
     data: UpdateJobData
   ) {
-    
-
     return prisma.deploymentJob.update({
       where: {
         id,
@@ -161,8 +162,6 @@ export const deploymentJobRepository = {
     id: string,
     retryAt: Date
   ) {
-    
-
     return prisma.deploymentJob.update({
       where: {
         id,
@@ -180,8 +179,6 @@ export const deploymentJobRepository = {
     id: string,
     error?: string
   ) {
-    
-
     return prisma.deploymentJob.update({
       where: {
         id,
@@ -196,22 +193,83 @@ export const deploymentJobRepository = {
   },
 
   async requestCancellation(id: string) {
-    
+    const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+      UPDATE "DeploymentJob"
+      SET
+        status = 'CANCEL_REQUESTED'::"JobStatus",
+        "cancelRequestedAt" = NOW()
+      WHERE
+        id = ${id}
+        AND status IN (
+          'PENDING'::"JobStatus",
+          'RUNNING'::"JobStatus"
+        )
+      RETURNING id;
+    `;
 
-    return prisma.deploymentJob.update({
+    if (rows.length === 0) {
+      return null;
+    }
+
+    return prisma.deploymentJob.findUnique({
       where: {
-        id,
-      },
-      data: {
-        status: JobStatus.CANCEL_REQUESTED,
-        cancelRequestedAt: new Date(),
+        id: rows[0].id,
       },
     });
   },
 
-  async markCancelled(id: string) {
-    
+  async markCompletedIfRunning(id: string) {
+    const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+      UPDATE "DeploymentJob"
+      SET
+        status = 'COMPLETED'::"JobStatus",
+        "completedAt" = NOW(),
+        error = NULL,
+        "nextRetryAt" = NULL
+      WHERE
+        id = ${id} AND status = 'RUNNING'::"JobStatus"
+      RETURNING id;
+    `;
+    return rows.length > 0;
+  },
+  async completeDeploymentIfRunning(
+  jobId: string,
+  deploymentId: string
+) {
+  return prisma.$transaction(async (tx) => {
+    const rows = await tx.$queryRaw<Array<{ id: string }>>`
+      UPDATE "DeploymentJob"
+      SET
+        status = 'COMPLETED'::"JobStatus",
+        "completedAt" = NOW(),
+        error = NULL,
+        "nextRetryAt" = NULL
+      WHERE
+        id = ${jobId}
+        AND "deploymentId" = ${deploymentId}
+        AND status = 'RUNNING'::"JobStatus"
+      RETURNING id;
+    `;
 
+    if (rows.length === 0) {
+      return false;
+    }
+
+    await tx.deployment.update({
+      where: {
+        id: deploymentId,
+      },
+      data: {
+        status: DeploymentStatus.SUCCESS,
+        isHealthy: true,
+      },
+    });
+
+    return true;
+  });
+},
+
+  async markCancelled(id: string) {
     return prisma.deploymentJob.update({
       where: {
         id,

@@ -24,14 +24,23 @@ export interface CommandResult {
   stderr: string;
 }
 
-function killProcessTree(child: ChildProcess) {
+function killProcessTree(
+  child: ChildProcess,
+  signal: NodeJS.Signals = "SIGTERM"
+) {
   if (!child.pid) {
     return;
   }
 
   try {
-    process.kill(child.pid, "SIGTERM");
-  } catch {}
+    // Negative PID targets the entire process group.
+    process.kill(-child.pid, signal);
+  } catch {
+    // Fall back to killing the direct child.
+    try {
+      child.kill(signal);
+    } catch {}
+  }
 }
 
 export const commandRunner = {
@@ -47,17 +56,18 @@ export const commandRunner = {
       );
 
       const child = spawn(
-        options.command,
-        options.args ?? [],
-        {
-          cwd: options.cwd,
-          env: {
-            ...process.env,
-            ...options.env,
-          },
-          shell: false,
-        }
-      );
+  options.command,
+  options.args ?? [],
+  {
+    cwd: options.cwd,
+    env: {
+      ...process.env,
+      ...options.env,
+    },
+    shell: false,
+    detached: true,
+  }
+);
 
       let stdout = "";
       let stderr = "";
@@ -98,20 +108,36 @@ export const commandRunner = {
 );
 
             if (
-              job &&
-              job.status === JobStatus.CANCEL_REQUESTED &&
-              !cancelled
-            ) {
-              cancelled = true;
+  job &&
+  job.status === JobStatus.CANCEL_REQUESTED &&
+  !cancelled
+) {
+  cancelled = true;
 
-              console.log(
-                "[CANCEL DETECTED]",
-                new Date().toISOString(),
-                jobId
-              );
+  console.log(
+    "[CANCEL DETECTED]",
+    new Date().toISOString(),
+    jobId
+  );
 
-              killProcessTree(child);
-            }
+  killProcessTree(child);
+
+  // Give SIGTERM a few seconds to shut the process down cleanly.
+  // Force-kill if it is still running.
+  killTimeout = setTimeout(() => {
+  if (!child.pid) {
+    return;
+  }
+
+  console.log(
+    "[CANCEL FORCE KILL]",
+    new Date().toISOString(),
+    jobId
+  );
+
+  killProcessTree(child, "SIGKILL");
+}, 5000);
+}
           } catch (error) {
             console.error(
               "[CANCEL POLLER ERROR]",
@@ -167,23 +193,18 @@ export const commandRunner = {
 
       if (options.timeoutMs) {
         timeout = setTimeout(() => {
-          console.error(
-            "[TIMEOUT]",
-            new Date().toISOString(),
-            options.command
-          );
+  console.error(
+    "[TIMEOUT]",
+    new Date().toISOString(),
+    options.command
+  );
 
-          killProcessTree(child);
+  killProcessTree(child, "SIGTERM");
 
-          killTimeout = setTimeout(() => {
-            try {
-              process.kill(
-                child.pid!,
-                "SIGKILL"
-              );
-            } catch {}
-          }, 5000);
-        }, options.timeoutMs);
+  killTimeout = setTimeout(() => {
+    killProcessTree(child, "SIGKILL");
+  }, 5000);
+}, options.timeoutMs);
       }
 
       child.on("error", (error) => {

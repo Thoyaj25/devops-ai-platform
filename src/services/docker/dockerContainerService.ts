@@ -23,7 +23,7 @@ export const dockerContainerService = {
   options.name,
 
   "--restart",
-  "unless-stopped",
+"no",
 ];
 
 for (const [key, value] of Object.entries(options.labels ?? {})) {
