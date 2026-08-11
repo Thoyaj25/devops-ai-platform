@@ -221,7 +221,9 @@ logger.info(
               "Deployment job failed"
             );
 
-            throw error;
+            // Terminal job failure must not escape into
+            // the outer worker-loop catch.
+            continue;
           }
         }
       } catch (error) {
