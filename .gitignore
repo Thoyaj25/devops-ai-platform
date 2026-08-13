@@ -58,3 +58,18 @@ nginx-final.txt
 .next/
 # Runtime generated deployment nginx configs
 nginx/conf.d/*.conf
+
+# Terraform
+
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.plan
+terraform/*tfplan*
+terraform/*.before-eks
+
+# Local Terraform variables
+
+terraform/*.tfvars
+!terraform/terraform.tfvars.example

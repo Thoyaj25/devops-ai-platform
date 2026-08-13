@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: marketsphere-app
+  labels:
+    app: marketsphere-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: marketsphere-app
+  template:
+    metadata:
+      labels:
+        app: marketsphere-app
+    spec:
+      containers:
+        - name: marketsphere-app
+          image: 484812335426.dkr.ecr.us-east-1.amazonaws.com/marketsphere-app:eks-test
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3000"
+            - name: HOSTNAME
+              value: "0.0.0.0"
+            - name: DATABASE_URL
+              value: "postgresql://dummy:dummy@localhost:5432/dummy"
+            - name: REDIS_URL
+              value: "redis://localhost:6379"
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
