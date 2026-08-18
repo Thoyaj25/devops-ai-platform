@@ -15,3 +15,9 @@ variable "environment" {
   type        = string
   default     = "dev"
 }
+
+variable "db_password" {
+  description = "Master password for the MarketSphere PostgreSQL database"
+  type        = string
+  sensitive   = true
+}

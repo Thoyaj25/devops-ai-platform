@@ -8,7 +8,7 @@ import { deploymentRepository } from "@/repositories/deploymentRepository";
 import { deploymentJobService } from "@/services/deployment/deploymentJobService";
 
 
-import { DockerDeploymentProvider } from "@/services/providers";
+import { KubernetesDeploymentProvider } from "@/services/providers/kubernetesDeploymentProvider";
 import { proxyService } from "@/services/proxy/proxyService";
 
 import { deploymentCleanupService } from "./deploymentCleanupService";
@@ -153,7 +153,7 @@ export const deploymentExecutor = {
     const imageName = `${image}:${deploymentId}`;
 
     const provider =
-      new DockerDeploymentProvider();
+      new KubernetesDeploymentProvider();
 
     const workspace =
       await workspaceService.prepare(deploymentId);
