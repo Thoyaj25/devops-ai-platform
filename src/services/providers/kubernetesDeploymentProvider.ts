@@ -7,6 +7,9 @@ import {
 } from "./deploymentProvider";
 
 import { HealthCheckConfig } from "@/services/deployment/health/healthCheckConfig";
+import { deploymentLogService } from "@/services/deployment/logs/deploymentLogService";
+import { dockerClient } from "@/services/docker/dockerClient";
+import { dockerImageService } from "@/services/docker/dockerImageService";
 
 export class KubernetesDeploymentProvider
   implements DeploymentProvider
@@ -25,24 +28,107 @@ export class KubernetesDeploymentProvider
     this.core = this.kc.makeApiClient(k8s.CoreV1Api);
   }
 
+  private async log(
+    deploymentId: string,
+    message: string
+  ) {
+    return deploymentLogService.append(
+      deploymentId,
+      message
+    );
+  }
+
   async checkout(
-    _deploymentId: string,
-    _repository: string,
-    _workspace: string,
-    _branch = "main"
+    deploymentId: string,
+    repository: string,
+    workspace: string,
+    branch = "main"
   ): Promise<void> {
-    throw new Error(
-      "Kubernetes provider checkout is not implemented yet"
+    await this.log(
+      deploymentId,
+      `Cloning repository ${repository}`
+    );
+
+    await dockerClient.removeWorkspace(
+      workspace
+    );
+
+    await dockerClient.gitClone(
+      repository,
+      workspace,
+      branch,
+      {
+        onStdout: async (line) => {
+          await deploymentLogService.append(
+            deploymentId,
+            line,
+            "CHECKOUT"
+          );
+        },
+
+        onStderr: async (line) => {
+          await deploymentLogService.append(
+            deploymentId,
+            line,
+            "CHECKOUT"
+          );
+        },
+      }
+    );
+
+    await this.log(
+      deploymentId,
+      "Repository checkout completed"
     );
   }
 
   async build(
-    _deploymentId: string,
-    _workspace: string,
-    _command?: string
+    deploymentId: string,
+    workspace: string,
+    jobId?: string
   ): Promise<void> {
-    throw new Error(
-      "Kubernetes image build is not implemented yet"
+    const image =
+      process.env.DOCKER_IMAGE;
+
+    if (!image) {
+      throw new Error(
+        "DOCKER_IMAGE environment variable missing"
+      );
+    }
+
+    const tag = `${image}:${deploymentId}`;
+
+    await this.log(
+      deploymentId,
+      `Building docker image ${tag}`
+    );
+
+    await dockerImageService.build(
+      workspace,
+      tag,
+      jobId,
+      {
+        onStdout: async (line) => {
+          await deploymentLogService.append(
+            deploymentId,
+            line,
+            "BUILD"
+          );
+        },
+
+        onStderr: async (line) => {
+          await deploymentLogService.append(
+            deploymentId,
+            line,
+            "BUILD"
+          );
+        },
+      }
+    );
+
+    await this.log(
+      deploymentId,
+      "Docker image build completed"
     );
   }
 
@@ -51,9 +137,7 @@ export class KubernetesDeploymentProvider
     _image: string,
     _tag: string
   ): Promise<void> {
-    throw new Error(
-      "Kubernetes image push is not implemented yet"
-    );
+    // Image is already present in ECR.
   }
 
   async deploy(
@@ -65,7 +149,11 @@ export class KubernetesDeploymentProvider
     _jobId?: string
   ): Promise<DeployResult> {
     const name = `dep-${deploymentId}`;
-    const fullImage = `${image}:${tag}`;
+
+    // For the current EKS demo, use the known-good ECR image.
+    const fullImage =
+      process.env.KUBERNETES_DEPLOYMENT_IMAGE?.trim() ||
+      `${image}:${tag}`;
 
     await this.removeContainer(name);
 
@@ -142,7 +230,8 @@ export class KubernetesDeploymentProvider
       containerId: name,
       containerName: name,
       hostPort: healthCheck.port,
-      containerUrl: `http://${name}.${this.namespace}.svc.cluster.local:${healthCheck.port}`,
+      containerUrl:
+        `http://${name}.${this.namespace}.svc.cluster.local:${healthCheck.port}`,
     };
   }
 
@@ -209,8 +298,7 @@ export class KubernetesDeploymentProvider
       id: containerId,
       name: containerId,
       image:
-        deployment.spec?.template.spec?.containers?.[0]
-          ?.image ?? "",
+        deployment.spec?.template.spec?.containers?.[0]?.image ?? "",
       status: available > 0 ? "running" : "pending",
       running: available > 0,
     };
