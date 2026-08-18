@@ -4,3 +4,7 @@ kind: Kustomization
 resources:
   - deployment.yaml
   - service.yaml
+  - worker-deployment.yaml
+  - worker-rbac.yaml
+  - redis-deployment.yaml
+  - redis-service.yaml
