@@ -23,6 +23,7 @@ import { DeploymentCancelledError } from "./errors/deploymentCancelledError";
 import { DeploymentTimeoutError } from "./errors/deploymentTimeoutError";
 import { DeploymentHealthCheckError } from "./errors/deploymentHealthCheckError";
 import { cleanupCancelledDeployment } from "./cancellationCleanup";
+import { deploymentHealthChecker } from "@/services/deployment/health/deploymentHealthChecker";
 
 export const deploymentExecutor = {
   async failDeployment(
@@ -300,10 +301,27 @@ export const deploymentExecutor = {
             "Running deployment health verification..."
           );
 
-          await proxyService.exposeDeployment(
-            deploymentId,
-            deploymentRuntime.containerName
-          );
+          if (provider instanceof KubernetesDeploymentProvider) {
+  await deploymentLogService.append(
+    deploymentId,
+    "Kubernetes deployment created; verifying Kubernetes Service health"
+  );
+
+  await deploymentHealthChecker.check(
+    deploymentRuntime.containerName,
+    {
+      path: deployment.project.healthCheckPath,
+      port: deployment.project.healthCheckPort,
+      startupTimeout: deployment.project.startupTimeout,
+    },
+    jobId
+  );
+} else {
+  await proxyService.exposeDeployment(
+    deploymentId,
+    deploymentRuntime.containerName
+  );
+}
 
 
 // Final cancellation barrier.
