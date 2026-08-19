@@ -5,3 +5,4 @@ namespace: marketsphere
 
 resources:
   - ../../base
+  - ingress.yaml
