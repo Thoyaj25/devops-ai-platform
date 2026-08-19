@@ -6,3 +6,4 @@ namespace: marketsphere
 resources:
   - ../../base
   - ingress.yaml
+  - app-hpa.yaml
