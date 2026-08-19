@@ -30,6 +30,8 @@ spec:
               value: "/etc/ssl/certs/rds-global-bundle.pem"
             - name: DOCKER_IMAGE
               value: "277140629583.dkr.ecr.us-east-1.amazonaws.com/marketsphere"
+            - name: KUBERNETES_DEPLOYMENT_IMAGE
+              value: "277140629583.dkr.ecr.us-east-1.amazonaws.com/marketsphere:eks-test"
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
