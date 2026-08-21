@@ -1,0 +1,129 @@
+name: Build and Deploy to EKS
+
+on:
+  push:
+    branches:
+      - feature/kubernetes-worker
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: marketsphere-eks-deploy
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: us-east-1
+  EKS_CLUSTER: marketsphere-dev-eks
+  ECR_REGISTRY: 277140629583.dkr.ecr.us-east-1.amazonaws.com
+  APP_REPOSITORY: marketsphere-app
+  WORKER_REPOSITORY: marketsphere-worker
+  NAMESPACE: marketsphere
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::277140629583:role/marketsphere-github-actions
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set image tag
+        id: image
+        run: echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push application image
+        run: |
+          APP_IMAGE="${ECR_REGISTRY}/${APP_REPOSITORY}:${{ steps.image.outputs.tag }}"
+
+          docker build \
+            -f Dockerfile.app \
+            -t "$APP_IMAGE" \
+            .
+
+          docker push "$APP_IMAGE"
+
+      - name: Build and push worker image
+        run: |
+          WORKER_IMAGE="${ECR_REGISTRY}/${WORKER_REPOSITORY}:${{ steps.image.outputs.tag }}"
+
+          docker build \
+            -f Dockerfile.worker.k8s \
+            -t "$WORKER_IMAGE" \
+            .
+
+          docker push "$WORKER_IMAGE"
+
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig \
+            --region "$AWS_REGION" \
+            --name "$EKS_CLUSTER"
+
+      - name: Deploy application
+        run: |
+          APP_IMAGE="${ECR_REGISTRY}/${APP_REPOSITORY}:${{ steps.image.outputs.tag }}"
+
+          kubectl -n "$NAMESPACE" set image \
+            deployment/marketsphere-app \
+            marketsphere-app="$APP_IMAGE"
+
+      - name: Deploy worker
+        run: |
+          WORKER_IMAGE="${ECR_REGISTRY}/${WORKER_REPOSITORY}:${{ steps.image.outputs.tag }}"
+
+          kubectl -n "$NAMESPACE" set image \
+            deployment/marketsphere-worker \
+            marketsphere-worker="$WORKER_IMAGE"
+
+      - name: Wait for application rollout
+        run: |
+          kubectl -n "$NAMESPACE" rollout status \
+            deployment/marketsphere-app \
+            --timeout=5m
+
+      - name: Wait for worker rollout
+        run: |
+          kubectl -n "$NAMESPACE" rollout status \
+            deployment/marketsphere-worker \
+            --timeout=5m
+
+      - name: Verify deployment
+        run: |
+          kubectl -n "$NAMESPACE" get pods
+          kubectl -n "$NAMESPACE" get deployment
+
+      - name: Health check
+        run: |
+          ALB_DNS=$(kubectl get ingress marketsphere \
+            -n "$NAMESPACE" \
+            -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+
+          echo "ALB: $ALB_DNS"
+
+          for i in {1..10}; do
+            STATUS=$(curl -sS -o /dev/null -w "%{http_code}" \
+              "http://${ALB_DNS}/api/health" || true)
+
+            echo "Health check $i: HTTP $STATUS"
+
+            if [ "$STATUS" = "200" ]; then
+              echo "Application is healthy."
+              exit 0
+            fi
+
+            sleep 10
+          done
+
+          echo "Application health check failed."
+          exit 1
