@@ -1,0 +1,23 @@
+{
+  "version": 4,
+  "terraform_version": "1.15.7",
+  "serial": 156,
+  "lineage": "c36fa5f7-177b-70d6-c876-38d2e3a7e37a",
+  "outputs": {},
+  "resources": [],
+  "check_results": [
+    {
+      "object_kind": "resource",
+      "config_addr": "module.eks.module.eks_managed_node_group.module.user_data.null_resource.validate_cluster_service_cidr",
+      "status": "unknown",
+      "objects": null
+    },
+    {
+      "object_kind": "resource",
+      "config_addr": "module.eks.module.self_managed_node_group.module.user_data.null_resource.validate_cluster_service_cidr",
+      "status": "unknown",
+      "objects": null
+    }
+  ]
+}
+

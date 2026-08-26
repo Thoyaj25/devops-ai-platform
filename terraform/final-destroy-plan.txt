@@ -1,0 +1,1895 @@
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  - destroy
+
+Terraform will perform the following actions:
+
+  # aws_db_instance.postgres will be destroyed
+  - resource "aws_db_instance" "postgres" {
+      - address                               = "marketsphere-dev-postgres.c0z4iiesmgu0.us-east-1.rds.amazonaws.com" -> null
+      - allocated_storage                     = 20 -> null
+      - apply_immediately                     = false -> null
+      - arn                                   = "arn:aws:rds:us-east-1:277140629583:db:marketsphere-dev-postgres" -> null
+      - auto_minor_version_upgrade            = true -> null
+      - availability_zone                     = "us-east-1a" -> null
+      - backup_retention_period               = 0 -> null
+      - backup_target                         = "region" -> null
+      - backup_window                         = "06:52-07:22" -> null
+      - ca_cert_identifier                    = "rds-ca-rsa2048-g1" -> null
+      - copy_tags_to_snapshot                 = false -> null
+      - customer_owned_ip_enabled             = false -> null
+      - database_insights_mode                = "standard" -> null
+      - db_name                               = "marketsphere" -> null
+      - db_subnet_group_name                  = "marketsphere-dev-postgres" -> null
+      - dedicated_log_volume                  = false -> null
+      - delete_automated_backups              = true -> null
+      - deletion_protection                   = false -> null
+      - domain_dns_ips                        = [] -> null
+      - enabled_cloudwatch_logs_exports       = [] -> null
+      - endpoint                              = "marketsphere-dev-postgres.c0z4iiesmgu0.us-east-1.rds.amazonaws.com:5432" -> null
+      - engine                                = "postgres" -> null
+      - engine_lifecycle_support              = "open-source-rds-extended-support" -> null
+      - engine_version                        = "16" -> null
+      - engine_version_actual                 = "16.13" -> null
+      - hosted_zone_id                        = "Z2R2ITUGPM61AM" -> null
+      - iam_database_authentication_enabled   = false -> null
+      - id                                    = "db-RKGGK2ZGZZO7KY7HDMHLPV7QYI" -> null
+      - identifier                            = "marketsphere-dev-postgres" -> null
+      - instance_class                        = "db.t3.micro" -> null
+      - iops                                  = 3000 -> null
+      - kms_key_id                            = "arn:aws:kms:us-east-1:277140629583:key/5baeae91-dcd3-44a8-bf26-0023a7987d4b" -> null
+      - license_model                         = "postgresql-license" -> null
+      - listener_endpoint                     = [] -> null
+      - maintenance_window                    = "sun:08:54-sun:09:24" -> null
+      - master_user_secret                    = [] -> null
+      - max_allocated_storage                 = 50 -> null
+      - monitoring_interval                   = 0 -> null
+      - multi_az                              = false -> null
+      - network_type                          = "IPV4" -> null
+      - option_group_name                     = "default:postgres-16" -> null
+      - parameter_group_name                  = "default.postgres16" -> null
+      - password                              = (sensitive value) -> null
+      - password_wo                           = (write-only attribute) -> null
+      - performance_insights_enabled          = false -> null
+      - performance_insights_retention_period = 0 -> null
+      - port                                  = 5432 -> null
+      - publicly_accessible                   = false -> null
+      - region                                = "us-east-1" -> null
+      - replicas                              = [] -> null
+      - resource_id                           = "db-RKGGK2ZGZZO7KY7HDMHLPV7QYI" -> null
+      - skip_final_snapshot                   = true -> null
+      - status                                = "available" -> null
+      - storage_encrypted                     = true -> null
+      - storage_throughput                    = 125 -> null
+      - storage_type                          = "gp3" -> null
+      - tags                                  = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-postgres"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all                              = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-postgres"
+          - "Project"     = "marketsphere"
+        } -> null
+      - upgrade_rollout_order                 = "second" -> null
+      - username                              = "marketsphere" -> null
+      - vpc_security_group_ids                = [
+          - "sg-0a7559503a1868fc5",
+        ] -> null
+        # (15 unchanged attributes hidden)
+    }
+
+  # aws_db_subnet_group.postgres will be destroyed
+  - resource "aws_db_subnet_group" "postgres" {
+      - arn                     = "arn:aws:rds:us-east-1:277140629583:subgrp:marketsphere-dev-postgres" -> null
+      - description             = "Managed by Terraform" -> null
+      - id                      = "marketsphere-dev-postgres" -> null
+      - name                    = "marketsphere-dev-postgres" -> null
+      - region                  = "us-east-1" -> null
+      - subnet_ids              = [
+          - "subnet-09580b0092ca3178f",
+          - "subnet-0e30232f926afeeec",
+        ] -> null
+      - supported_network_types = [
+          - "IPV4",
+        ] -> null
+      - tags                    = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-postgres"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all                = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-postgres"
+          - "Project"     = "marketsphere"
+        } -> null
+      - vpc_id                  = "vpc-0f06accd4e12eb7f4" -> null
+        # (1 unchanged attribute hidden)
+    }
+
+  # aws_security_group.postgres will be destroyed
+  - resource "aws_security_group" "postgres" {
+      - arn                    = "arn:aws:ec2:us-east-1:277140629583:security-group/sg-0a7559503a1868fc5" -> null
+      - description            = "Security group for MarketSphere PostgreSQL" -> null
+      - egress                 = [
+          - {
+              - cidr_blocks      = [
+                  - "0.0.0.0/0",
+                ]
+              - description      = "Allow outbound traffic"
+              - from_port        = 0
+              - ipv6_cidr_blocks = []
+              - prefix_list_ids  = []
+              - protocol         = "-1"
+              - security_groups  = []
+              - self             = false
+              - to_port          = 0
+            },
+        ] -> null
+      - id                     = "sg-0a7559503a1868fc5" -> null
+      - ingress                = [
+          - {
+              - cidr_blocks      = [
+                  - "10.20.0.0/16",
+                ]
+              - description      = "PostgreSQL from MarketSphere VPC"
+              - from_port        = 5432
+              - ipv6_cidr_blocks = []
+              - prefix_list_ids  = []
+              - protocol         = "tcp"
+              - security_groups  = []
+              - self             = false
+              - to_port          = 5432
+            },
+        ] -> null
+      - name                   = "marketsphere-dev-postgres" -> null
+      - owner_id               = "277140629583" -> null
+      - region                 = "us-east-1" -> null
+      - revoke_rules_on_delete = false -> null
+      - tags                   = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-postgres"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all               = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-postgres"
+          - "Project"     = "marketsphere"
+        } -> null
+      - vpc_id                 = "vpc-0f06accd4e12eb7f4" -> null
+        # (1 unchanged attribute hidden)
+    }
+
+  # module.eks.aws_cloudwatch_log_group.this[0] will be destroyed
+  - resource "aws_cloudwatch_log_group" "this" {
+      - arn                         = "arn:aws:logs:us-east-1:277140629583:log-group:/aws/eks/marketsphere-dev-eks/cluster" -> null
+      - deletion_protection_enabled = false -> null
+      - id                          = "/aws/eks/marketsphere-dev-eks/cluster" -> null
+      - log_group_class             = "STANDARD" -> null
+      - name                        = "/aws/eks/marketsphere-dev-eks/cluster" -> null
+      - region                      = "us-east-1" -> null
+      - retention_in_days           = 90 -> null
+      - skip_destroy                = false -> null
+      - tags                        = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "/aws/eks/marketsphere-dev-eks/cluster"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all                    = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "/aws/eks/marketsphere-dev-eks/cluster"
+          - "Project"     = "marketsphere"
+        } -> null
+        # (2 unchanged attributes hidden)
+    }
+
+  # module.eks.aws_ec2_tag.cluster_primary_security_group["Environment"] will be destroyed
+  - resource "aws_ec2_tag" "cluster_primary_security_group" {
+      - id          = "sg-06b250f7e5876b98b,Environment" -> null
+      - key         = "Environment" -> null
+      - region      = "us-east-1" -> null
+      - resource_id = "sg-06b250f7e5876b98b" -> null
+      - value       = "dev" -> null
+    }
+
+  # module.eks.aws_ec2_tag.cluster_primary_security_group["ManagedBy"] will be destroyed
+  - resource "aws_ec2_tag" "cluster_primary_security_group" {
+      - id          = "sg-06b250f7e5876b98b,ManagedBy" -> null
+      - key         = "ManagedBy" -> null
+      - region      = "us-east-1" -> null
+      - resource_id = "sg-06b250f7e5876b98b" -> null
+      - value       = "terraform" -> null
+    }
+
+  # module.eks.aws_ec2_tag.cluster_primary_security_group["Project"] will be destroyed
+  - resource "aws_ec2_tag" "cluster_primary_security_group" {
+      - id          = "sg-06b250f7e5876b98b,Project" -> null
+      - key         = "Project" -> null
+      - region      = "us-east-1" -> null
+      - resource_id = "sg-06b250f7e5876b98b" -> null
+      - value       = "marketsphere" -> null
+    }
+
+  # module.eks.aws_eks_access_entry.this["cluster_creator"] will be destroyed
+  - resource "aws_eks_access_entry" "this" {
+      - access_entry_arn  = "arn:aws:eks:us-east-1:277140629583:access-entry/marketsphere-dev-eks/user/277140629583/marketsphere-admin/1cd009d5-e86c-1c88-2b62-30e93c5d6dfa" -> null
+      - cluster_name      = "marketsphere-dev-eks" -> null
+      - created_at        = "2026-08-18T07:00:22Z" -> null
+      - id                = "marketsphere-dev-eks:arn:aws:iam::277140629583:user/marketsphere-admin" -> null
+      - kubernetes_groups = [] -> null
+      - modified_at       = "2026-08-18T07:00:22Z" -> null
+      - principal_arn     = "arn:aws:iam::277140629583:user/marketsphere-admin" -> null
+      - region            = "us-east-1" -> null
+      - tags              = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all          = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "marketsphere"
+        } -> null
+      - type              = "STANDARD" -> null
+      - user_name         = "arn:aws:iam::277140629583:user/marketsphere-admin" -> null
+    }
+
+  # module.eks.aws_eks_access_policy_association.this["cluster_creator_admin"] will be destroyed
+  - resource "aws_eks_access_policy_association" "this" {
+      - associated_at = "2026-08-18 07:00:24.273 +0000 UTC" -> null
+      - cluster_name  = "marketsphere-dev-eks" -> null
+      - id            = "marketsphere-dev-eks#arn:aws:iam::277140629583:user/marketsphere-admin#arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy" -> null
+      - modified_at   = "2026-08-18 07:00:24.273 +0000 UTC" -> null
+      - policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy" -> null
+      - principal_arn = "arn:aws:iam::277140629583:user/marketsphere-admin" -> null
+      - region        = "us-east-1" -> null
+
+      - access_scope {
+          - namespaces = [] -> null
+          - type       = "cluster" -> null
+        }
+    }
+
+  # module.eks.aws_eks_addon.before_compute["eks-pod-identity-agent"] will be destroyed
+  - resource "aws_eks_addon" "before_compute" {
+      - addon_name                  = "eks-pod-identity-agent" -> null
+      - addon_version               = "v1.4.0-eksbuild.1" -> null
+      - arn                         = "arn:aws:eks:us-east-1:277140629583:addon/marketsphere-dev-eks/eks-pod-identity-agent/4ed009d5-eaa0-a1c7-6f06-b3a1a79d7391" -> null
+      - cluster_name                = "marketsphere-dev-eks" -> null
+      - created_at                  = "2026-08-18T07:00:23Z" -> null
+      - id                          = "marketsphere-dev-eks:eks-pod-identity-agent" -> null
+      - modified_at                 = "2026-08-18T07:00:29Z" -> null
+      - preserve                    = true -> null
+      - region                      = "us-east-1" -> null
+      - resolve_conflicts_on_create = "NONE" -> null
+      - resolve_conflicts_on_update = "OVERWRITE" -> null
+      - tags                        = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all                    = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "marketsphere"
+        } -> null
+        # (2 unchanged attributes hidden)
+
+      - namespace_config {
+          - namespace = "kube-system" -> null
+        }
+
+      - timeouts {}
+    }
+
+  # module.eks.aws_eks_addon.before_compute["vpc-cni"] will be destroyed
+  - resource "aws_eks_addon" "before_compute" {
+      - addon_name                  = "vpc-cni" -> null
+      - addon_version               = "v1.23.0-eksbuild.1" -> null
+      - arn                         = "arn:aws:eks:us-east-1:277140629583:addon/marketsphere-dev-eks/vpc-cni/1cd009d5-ea9c-f965-d4db-d1624141ad73" -> null
+      - cluster_name                = "marketsphere-dev-eks" -> null
+      - created_at                  = "2026-08-18T07:00:23Z" -> null
+      - id                          = "marketsphere-dev-eks:vpc-cni" -> null
+      - modified_at                 = "2026-08-18T07:00:41Z" -> null
+      - preserve                    = true -> null
+      - region                      = "us-east-1" -> null
+      - resolve_conflicts_on_create = "NONE" -> null
+      - resolve_conflicts_on_update = "OVERWRITE" -> null
+      - tags                        = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all                    = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "marketsphere"
+        } -> null
+        # (2 unchanged attributes hidden)
+
+      - namespace_config {
+          - namespace = "kube-system" -> null
+        }
+
+      - timeouts {}
+    }
+
+  # module.eks.aws_eks_addon.this["coredns"] will be destroyed
+  - resource "aws_eks_addon" "this" {
+      - addon_name                  = "coredns" -> null
+      - addon_version               = "v1.13.2-eksbuild.21" -> null
+      - arn                         = "arn:aws:eks:us-east-1:277140629583:addon/marketsphere-dev-eks/coredns/1ed009d7-25e5-5d79-10cc-73a3981c611f" -> null
+      - cluster_name                = "marketsphere-dev-eks" -> null
+      - created_at                  = "2026-08-18T07:03:05Z" -> null
+      - id                          = "marketsphere-dev-eks:coredns" -> null
+      - modified_at                 = "2026-08-23T12:09:20Z" -> null
+      - preserve                    = true -> null
+      - region                      = "us-east-1" -> null
+      - resolve_conflicts_on_create = "NONE" -> null
+      - resolve_conflicts_on_update = "OVERWRITE" -> null
+      - tags                        = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all                    = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "marketsphere"
+        } -> null
+        # (2 unchanged attributes hidden)
+
+      - namespace_config {
+          - namespace = "kube-system" -> null
+        }
+
+      - timeouts {}
+    }
+
+  # module.eks.aws_eks_addon.this["kube-proxy"] will be destroyed
+  - resource "aws_eks_addon" "this" {
+      - addon_name                  = "kube-proxy" -> null
+      - addon_version               = "v1.33.10-eksbuild.19" -> null
+      - arn                         = "arn:aws:eks:us-east-1:277140629583:addon/marketsphere-dev-eks/kube-proxy/3ed009d7-25e2-c62a-acf6-5768c7926e8d" -> null
+      - cluster_name                = "marketsphere-dev-eks" -> null
+      - created_at                  = "2026-08-18T07:03:05Z" -> null
+      - id                          = "marketsphere-dev-eks:kube-proxy" -> null
+      - modified_at                 = "2026-08-23T12:08:49Z" -> null
+      - preserve                    = true -> null
+      - region                      = "us-east-1" -> null
+      - resolve_conflicts_on_create = "NONE" -> null
+      - resolve_conflicts_on_update = "OVERWRITE" -> null
+      - tags                        = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all                    = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "marketsphere"
+        } -> null
+        # (2 unchanged attributes hidden)
+
+      - namespace_config {
+          - namespace = "kube-system" -> null
+        }
+
+      - timeouts {}
+    }
+
+  # module.eks.aws_eks_cluster.this[0] will be destroyed
+  - resource "aws_eks_cluster" "this" {
+      - arn                           = "arn:aws:eks:us-east-1:277140629583:cluster/marketsphere-dev-eks" -> null
+      - bootstrap_self_managed_addons = false -> null
+      - certificate_authority         = [
+          - {
+              - data = "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUREakNDQWZhZ0F3SUJBZ0lSQU04ZFhXeXlpYmdkSjhhemxJVnhhTXd3RFFZSktvWklodmNOQVFFTEJRQXcKRlRFVE1CRUdBMVVFQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB5TmpBNE1UZ3dOalV4TVRGYUZ3MHpOakE0TVRVdwpOalV4TVRGYU1CVXhFekFSQmdOVkJBTVRDbXQxWW1WeWJtVjBaWE13Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBCkE0SUJEd0F3Z2dFS0FvSUJBUUNYekM0aDJsYVUvZ3VsZ1pUT20vYUhYMzJ4MXlNVGt5MUU5ZjNTaVRCOTY4ZzEKcTFrNjdmazZMblBQeC9iK1JTQmhwRDBWR2pFS1NrdUcvSnUrQW9NMm1tcTFNZEQvZUdYZ09ld0JsQ0VjWHZ1SQo2YU4rU0M0d2YyRXB2REQzNFcybFdBVHFzRW9TbjNwbkRJdWRPU2JFOFdwbXNkcUQ0YTZMUlM4Ukt4anZQamk3CmpqRFNTaHRrVTNnYTNUWWZwWjVRaDRwQTVhNkQxSm12NHdwbmxDR3dXOWtBdWRsb256QU1uNGtMUnBVd2U4S1EKVzZGSFBZS0V3clExLzRtN0xYY0w0cHlwNzZmekRCS2FMdkRaRzZzODNxOVQxTzJiRmpjV3dPRnVuQ3Vzb01JaQpZMlNoRk9TM3F5NktsNTVFaUgrWXBwdDhLN21LVWxIRCtmcVJPMjkzQWdNQkFBR2pXVEJYTUE0R0ExVWREd0VCCi93UUVBd0lDcERBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJRc2J6c3JibWxpMm9lV0Z0cUEKSnUzWklka3IyekFWQmdOVkhSRUVEakFNZ2dwcmRXSmxjbTVsZEdWek1BMEdDU3FHU0liM0RRRUJDd1VBQTRJQgpBUUJFZzF6L3BiSE5FUnhHQ0xmbm9iMncvaXFEL1ZRaUQ0a2phc0JWTHdTbDJhVjBCUzZzVS8vRkpCZTBadVJHCkVzKzZtMGVJbzNOcU1Cd2VUNzVjL1hVeVVvVmUyUWhPeTFWTG9MNWI0YTBacGhKbzN4UUVVbnFaNXRWelVHNWMKOGFQWXRUU2lKWXh5c05pRHg3OXN3VDFUNkRIK3BMRnBxb1U5c3hPWVdaQVUzRStNN2UyRHlreUNnRnFTUmZLWgp1K0dGNm1lVVd1dFR1bCs2Z0tjUndVN3J3OThuUDNKMDZXOGxoZDNZWmxURFA3dm5LNzgxMnFKRnR5bG9wRDBhCktQdTVYc0pTSlFqM1hKQmlqRzNaT05hNlB1NDBJRnJxQmpWK1NiUlMzNTJwVWIxT1lsa3gweFpiKzhvZGJIZTMKKzFJNEV4RVJtZi9hOFBXSzQ5MW94b2R4Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"
+            },
+        ] -> null
+      - created_at                    = "2026-08-18T06:50:49Z" -> null
+      - deletion_protection           = false -> null
+      - enabled_cluster_log_types     = [
+          - "api",
+          - "audit",
+          - "authenticator",
+        ] -> null
+      - endpoint                      = "https://9D6D0DE8DEC421852DDEB1691CCB9255.gr7.us-east-1.eks.amazonaws.com" -> null
+      - id                            = "marketsphere-dev-eks" -> null
+      - identity                      = [
+          - {
+              - oidc = [
+                  - {
+                      - issuer = "https://oidc.eks.us-east-1.amazonaws.com/id/9D6D0DE8DEC421852DDEB1691CCB9255"
+                    },
+                ]
+            },
+        ] -> null
+      - name                          = "marketsphere-dev-eks" -> null
+      - platform_version              = "eks.45" -> null
+      - region                        = "us-east-1" -> null
+      - role_arn                      = "arn:aws:iam::277140629583:role/marketsphere-dev-eks-cluster-f8b4f756285c6f0d342a5c8feb" -> null
+      - status                        = "ACTIVE" -> null
+      - tags                          = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all                      = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "marketsphere"
+        } -> null
+      - version                       = "1.33" -> null
+
+      - access_config {
+          - authentication_mode                         = "API_AND_CONFIG_MAP" -> null
+          - bootstrap_cluster_creator_admin_permissions = false -> null
+        }
+
+      - compute_config {
+          - enabled       = false -> null
+          - node_pools    = [] -> null
+            # (1 unchanged attribute hidden)
+        }
+
+      - control_plane_scaling_config {
+          - tier = "standard" -> null
+        }
+
+      - encryption_config {
+          - resources = [
+              - "secrets",
+            ] -> null
+
+          - provider {
+              - key_arn = "arn:aws:kms:us-east-1:277140629583:key/9ddc392b-42bf-4efb-9524-f6ba1f8f64ad" -> null
+            }
+        }
+
+      - kube_api_server_config {
+          - event_ttl = "60m" -> null
+
+          - service_node_port_range {
+              - max_port = 32767 -> null
+              - min_port = 30000 -> null
+            }
+        }
+
+      - kube_controller_manager_config {
+          - horizontal_pod_autoscaler_controller_config {
+              - horizontal_pod_autoscaler_sync_period = "15s" -> null
+            }
+        }
+
+      - kube_scheduler_config {
+          - node_resources_fit {
+              - scoring_strategy {
+                  - type = "LeastAllocated" -> null
+
+                  - resource {
+                      - name   = "cpu" -> null
+                      - weight = 1 -> null
+                    }
+                  - resource {
+                      - name   = "memory" -> null
+                      - weight = 1 -> null
+                    }
+                }
+            }
+        }
+
+      - kubernetes_network_config {
+          - ip_family         = "ipv4" -> null
+          - service_ipv4_cidr = "172.20.0.0/16" -> null
+            # (1 unchanged attribute hidden)
+
+          - elastic_load_balancing {
+              - enabled = false -> null
+            }
+        }
+
+      - storage_config {
+          - block_storage {
+              - enabled = false -> null
+            }
+        }
+
+      - upgrade_policy {
+          - support_type = "EXTENDED" -> null
+        }
+
+      - vpc_config {
+          - cluster_security_group_id = "sg-06b250f7e5876b98b" -> null
+          - control_plane_egress_mode = "AWS_MANAGED" -> null
+          - endpoint_private_access   = true -> null
+          - endpoint_public_access    = true -> null
+          - public_access_cidrs       = [
+              - "0.0.0.0/0",
+            ] -> null
+          - security_group_ids        = [
+              - "sg-034eb272f548bf4e8",
+            ] -> null
+          - subnet_ids                = [
+              - "subnet-09580b0092ca3178f",
+              - "subnet-0e30232f926afeeec",
+            ] -> null
+          - vpc_id                    = "vpc-0f06accd4e12eb7f4" -> null
+        }
+    }
+
+  # module.eks.aws_iam_openid_connect_provider.oidc_provider[0] will be destroyed
+  - resource "aws_iam_openid_connect_provider" "oidc_provider" {
+      - arn             = "arn:aws:iam::277140629583:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/9D6D0DE8DEC421852DDEB1691CCB9255" -> null
+      - client_id_list  = [
+          - "sts.amazonaws.com",
+        ] -> null
+      - id              = "arn:aws:iam::277140629583:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/9D6D0DE8DEC421852DDEB1691CCB9255" -> null
+      - tags            = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-eks-eks-irsa"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all        = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-eks-eks-irsa"
+          - "Project"     = "marketsphere"
+        } -> null
+      - thumbprint_list = [
+          - "06b25927c42a721631c1efd9431e648fa62e1e39",
+        ] -> null
+      - url             = "oidc.eks.us-east-1.amazonaws.com/id/9D6D0DE8DEC421852DDEB1691CCB9255" -> null
+    }
+
+  # module.eks.aws_iam_policy.cluster_encryption[0] will be destroyed
+  - resource "aws_iam_policy" "cluster_encryption" {
+      - arn              = "arn:aws:iam::277140629583:policy/marketsphere-dev-eks-cluster-ClusterEncryptione21865aa1e0d33cfe28f2b57d1" -> null
+      - attachment_count = 1 -> null
+      - description      = "Cluster encryption policy to allow cluster role to utilize CMK provided" -> null
+      - id               = "arn:aws:iam::277140629583:policy/marketsphere-dev-eks-cluster-ClusterEncryptione21865aa1e0d33cfe28f2b57d1" -> null
+      - name             = "marketsphere-dev-eks-cluster-ClusterEncryptione21865aa1e0d33cfe28f2b57d1" -> null
+      - name_prefix      = "marketsphere-dev-eks-cluster-ClusterEncryption" -> null
+      - path             = "/" -> null
+      - policy           = jsonencode(
+            {
+              - Statement = [
+                  - {
+                      - Action   = [
+                          - "kms:Encrypt",
+                          - "kms:Decrypt",
+                          - "kms:ListGrants",
+                          - "kms:DescribeKey",
+                        ]
+                      - Effect   = "Allow"
+                      - Resource = "arn:aws:kms:us-east-1:277140629583:key/9ddc392b-42bf-4efb-9524-f6ba1f8f64ad"
+                    },
+                ]
+              - Version   = "2012-10-17"
+            }
+        ) -> null
+      - policy_id        = "ANPAUBBW6NBHTUZFXOON4" -> null
+      - tags             = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all         = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "marketsphere"
+        } -> null
+    }
+
+  # module.eks.aws_iam_role.this[0] will be destroyed
+  - resource "aws_iam_role" "this" {
+      - arn                   = "arn:aws:iam::277140629583:role/marketsphere-dev-eks-cluster-f8b4f756285c6f0d342a5c8feb" -> null
+      - assume_role_policy    = jsonencode(
+            {
+              - Statement = [
+                  - {
+                      - Action    = [
+                          - "sts:TagSession",
+                          - "sts:AssumeRole",
+                        ]
+                      - Effect    = "Allow"
+                      - Principal = {
+                          - Service = "eks.amazonaws.com"
+                        }
+                      - Sid       = "EKSClusterAssumeRole"
+                    },
+                ]
+              - Version   = "2012-10-17"
+            }
+        ) -> null
+      - create_date           = "2026-08-18T06:50:16Z" -> null
+      - force_detach_policies = true -> null
+      - id                    = "marketsphere-dev-eks-cluster-f8b4f756285c6f0d342a5c8feb" -> null
+      - managed_policy_arns   = [
+          - "arn:aws:iam::277140629583:policy/marketsphere-dev-eks-cluster-ClusterEncryptione21865aa1e0d33cfe28f2b57d1",
+          - "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy",
+        ] -> null
+      - max_session_duration  = 3600 -> null
+      - name                  = "marketsphere-dev-eks-cluster-f8b4f756285c6f0d342a5c8feb" -> null
+      - name_prefix           = "marketsphere-dev-eks-cluster-" -> null
+      - path                  = "/" -> null
+      - tags                  = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all              = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "marketsphere"
+        } -> null
+      - unique_id             = "AROAUBBW6NBH6XLSC2DYH" -> null
+        # (2 unchanged attributes hidden)
+    }
+
+  # module.eks.aws_iam_role_policy_attachment.cluster_encryption[0] will be destroyed
+  - resource "aws_iam_role_policy_attachment" "cluster_encryption" {
+      - id         = "marketsphere-dev-eks-cluster-f8b4f756285c6f0d342a5c8feb/arn:aws:iam::277140629583:policy/marketsphere-dev-eks-cluster-ClusterEncryptione21865aa1e0d33cfe28f2b57d1" -> null
+      - policy_arn = "arn:aws:iam::277140629583:policy/marketsphere-dev-eks-cluster-ClusterEncryptione21865aa1e0d33cfe28f2b57d1" -> null
+      - role       = "marketsphere-dev-eks-cluster-f8b4f756285c6f0d342a5c8feb" -> null
+    }
+
+  # module.eks.aws_iam_role_policy_attachment.this["AmazonEKSClusterPolicy"] will be destroyed
+  - resource "aws_iam_role_policy_attachment" "this" {
+      - id         = "marketsphere-dev-eks-cluster-f8b4f756285c6f0d342a5c8feb/arn:aws:iam::aws:policy/AmazonEKSClusterPolicy" -> null
+      - policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy" -> null
+      - role       = "marketsphere-dev-eks-cluster-f8b4f756285c6f0d342a5c8feb" -> null
+    }
+
+  # module.eks.aws_security_group.cluster[0] will be destroyed
+  - resource "aws_security_group" "cluster" {
+      - arn                    = "arn:aws:ec2:us-east-1:277140629583:security-group/sg-034eb272f548bf4e8" -> null
+      - description            = "EKS cluster security group" -> null
+      - egress                 = [] -> null
+      - id                     = "sg-034eb272f548bf4e8" -> null
+      - ingress                = [
+          - {
+              - cidr_blocks      = []
+              - description      = "Node groups to cluster API"
+              - from_port        = 443
+              - ipv6_cidr_blocks = []
+              - prefix_list_ids  = []
+              - protocol         = "tcp"
+              - security_groups  = [
+                  - "sg-0f7a4489a1b420753",
+                ]
+              - self             = false
+              - to_port          = 443
+            },
+        ] -> null
+      - name                   = "marketsphere-dev-eks-cluster-be3c787ece8823215b1a8d3f80" -> null
+      - name_prefix            = "marketsphere-dev-eks-cluster-" -> null
+      - owner_id               = "277140629583" -> null
+      - region                 = "us-east-1" -> null
+      - revoke_rules_on_delete = false -> null
+      - tags                   = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-eks-cluster"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all               = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-eks-cluster"
+          - "Project"     = "marketsphere"
+        } -> null
+      - vpc_id                 = "vpc-0f06accd4e12eb7f4" -> null
+    }
+
+  # module.eks.aws_security_group.node[0] will be destroyed
+  - resource "aws_security_group" "node" {
+      - arn                    = "arn:aws:ec2:us-east-1:277140629583:security-group/sg-0f7a4489a1b420753" -> null
+      - description            = "EKS node shared security group" -> null
+      - egress                 = [
+          - {
+              - cidr_blocks      = [
+                  - "0.0.0.0/0",
+                ]
+              - description      = "Allow all egress"
+              - from_port        = 0
+              - ipv6_cidr_blocks = []
+              - prefix_list_ids  = []
+              - protocol         = "-1"
+              - security_groups  = []
+              - self             = false
+              - to_port          = 0
+            },
+        ] -> null
+      - id                     = "sg-0f7a4489a1b420753" -> null
+      - ingress                = [
+          - {
+              - cidr_blocks      = []
+              - description      = "Cluster API to node 10251/tcp webhook"
+              - from_port        = 10251
+              - ipv6_cidr_blocks = []
+              - prefix_list_ids  = []
+              - protocol         = "tcp"
+              - security_groups  = [
+                  - "sg-034eb272f548bf4e8",
+                ]
+              - self             = false
+              - to_port          = 10251
+            },
+          - {
+              - cidr_blocks      = []
+              - description      = "Cluster API to node 4443/tcp webhook"
+              - from_port        = 4443
+              - ipv6_cidr_blocks = []
+              - prefix_list_ids  = []
+              - protocol         = "tcp"
+              - security_groups  = [
+                  - "sg-034eb272f548bf4e8",
+                ]
+              - self             = false
+              - to_port          = 4443
+            },
+          - {
+              - cidr_blocks      = []
+              - description      = "Cluster API to node 6443/tcp webhook"
+              - from_port        = 6443
+              - ipv6_cidr_blocks = []
+              - prefix_list_ids  = []
+              - protocol         = "tcp"
+              - security_groups  = [
+                  - "sg-034eb272f548bf4e8",
+                ]
+              - self             = false
+              - to_port          = 6443
+            },
+          - {
+              - cidr_blocks      = []
+              - description      = "Cluster API to node 8443/tcp webhook"
+              - from_port        = 8443
+              - ipv6_cidr_blocks = []
+              - prefix_list_ids  = []
+              - protocol         = "tcp"
+              - security_groups  = [
+                  - "sg-034eb272f548bf4e8",
+                ]
+              - self             = false
+              - to_port          = 8443
+            },
+          - {
+              - cidr_blocks      = []
+              - description      = "Cluster API to node 9443/tcp webhook"
+              - from_port        = 9443
+              - ipv6_cidr_blocks = []
+              - prefix_list_ids  = []
+              - protocol         = "tcp"
+              - security_groups  = [
+                  - "sg-034eb272f548bf4e8",
+                ]
+              - self             = false
+              - to_port          = 9443
+            },
+          - {
+              - cidr_blocks      = []
+              - description      = "Cluster API to node groups"
+              - from_port        = 443
+              - ipv6_cidr_blocks = []
+              - prefix_list_ids  = []
+              - protocol         = "tcp"
+              - security_groups  = [
+                  - "sg-034eb272f548bf4e8",
+                ]
+              - self             = false
+              - to_port          = 443
+            },
+          - {
+              - cidr_blocks      = []
+              - description      = "Cluster API to node kubelets"
+              - from_port        = 10250
+              - ipv6_cidr_blocks = []
+              - prefix_list_ids  = []
+              - protocol         = "tcp"
+              - security_groups  = [
+                  - "sg-034eb272f548bf4e8",
+                ]
+              - self             = false
+              - to_port          = 10250
+            },
+          - {
+              - cidr_blocks      = []
+              - description      = "Node to node CoreDNS UDP"
+              - from_port        = 53
+              - ipv6_cidr_blocks = []
+              - prefix_list_ids  = []
+              - protocol         = "udp"
+              - security_groups  = []
+              - self             = true
+              - to_port          = 53
+            },
+          - {
+              - cidr_blocks      = []
+              - description      = "Node to node CoreDNS"
+              - from_port        = 53
+              - ipv6_cidr_blocks = []
+              - prefix_list_ids  = []
+              - protocol         = "tcp"
+              - security_groups  = []
+              - self             = true
+              - to_port          = 53
+            },
+          - {
+              - cidr_blocks      = []
+              - description      = "Node to node ingress on ephemeral ports"
+              - from_port        = 1025
+              - ipv6_cidr_blocks = []
+              - prefix_list_ids  = []
+              - protocol         = "tcp"
+              - security_groups  = []
+              - self             = true
+              - to_port          = 65535
+            },
+          - {
+              - cidr_blocks      = []
+              - description      = "elbv2.k8s.aws/targetGroupBinding=shared"
+              - from_port        = 3000
+              - ipv6_cidr_blocks = []
+              - prefix_list_ids  = []
+              - protocol         = "tcp"
+              - security_groups  = [
+                  - "sg-0aa981efeef37afeb",
+                ]
+              - self             = false
+              - to_port          = 3000
+            },
+        ] -> null
+      - name                   = "marketsphere-dev-eks-node-d16662f9808d74c68dba89b3c0" -> null
+      - name_prefix            = "marketsphere-dev-eks-node-" -> null
+      - owner_id               = "277140629583" -> null
+      - region                 = "us-east-1" -> null
+      - revoke_rules_on_delete = false -> null
+      - tags                   = {
+          - "Environment"                                = "dev"
+          - "ManagedBy"                                  = "terraform"
+          - "Name"                                       = "marketsphere-dev-eks-node"
+          - "Project"                                    = "marketsphere"
+          - "kubernetes.io/cluster/marketsphere-dev-eks" = "owned"
+        } -> null
+      - tags_all               = {
+          - "Environment"                                = "dev"
+          - "ManagedBy"                                  = "terraform"
+          - "Name"                                       = "marketsphere-dev-eks-node"
+          - "Project"                                    = "marketsphere"
+          - "kubernetes.io/cluster/marketsphere-dev-eks" = "owned"
+        } -> null
+      - vpc_id                 = "vpc-0f06accd4e12eb7f4" -> null
+    }
+
+  # module.eks.aws_security_group_rule.cluster["ingress_nodes_443"] will be destroyed
+  - resource "aws_security_group_rule" "cluster" {
+      - description              = "Node groups to cluster API" -> null
+      - from_port                = 443 -> null
+      - id                       = "sgrule-100369010" -> null
+      - protocol                 = "tcp" -> null
+      - region                   = "us-east-1" -> null
+      - security_group_id        = "sg-034eb272f548bf4e8" -> null
+      - security_group_rule_id   = "sgr-0ab049473b1601829" -> null
+      - self                     = false -> null
+      - source_security_group_id = "sg-0f7a4489a1b420753" -> null
+      - to_port                  = 443 -> null
+      - type                     = "ingress" -> null
+    }
+
+  # module.eks.aws_security_group_rule.node["egress_all"] will be destroyed
+  - resource "aws_security_group_rule" "node" {
+      - cidr_blocks            = [
+          - "0.0.0.0/0",
+        ] -> null
+      - description            = "Allow all egress" -> null
+      - from_port              = 0 -> null
+      - id                     = "sgrule-2815382983" -> null
+      - protocol               = "-1" -> null
+      - region                 = "us-east-1" -> null
+      - security_group_id      = "sg-0f7a4489a1b420753" -> null
+      - security_group_rule_id = "sgr-043bb6e9203dcea50" -> null
+      - self                   = false -> null
+      - to_port                = 0 -> null
+      - type                   = "egress" -> null
+    }
+
+  # module.eks.aws_security_group_rule.node["ingress_cluster_10251_webhook"] will be destroyed
+  - resource "aws_security_group_rule" "node" {
+      - description              = "Cluster API to node 10251/tcp webhook" -> null
+      - from_port                = 10251 -> null
+      - id                       = "sgrule-3101966905" -> null
+      - protocol                 = "tcp" -> null
+      - region                   = "us-east-1" -> null
+      - security_group_id        = "sg-0f7a4489a1b420753" -> null
+      - security_group_rule_id   = "sgr-06a10037f9c8b1cc7" -> null
+      - self                     = false -> null
+      - source_security_group_id = "sg-034eb272f548bf4e8" -> null
+      - to_port                  = 10251 -> null
+      - type                     = "ingress" -> null
+    }
+
+  # module.eks.aws_security_group_rule.node["ingress_cluster_443"] will be destroyed
+  - resource "aws_security_group_rule" "node" {
+      - description              = "Cluster API to node groups" -> null
+      - from_port                = 443 -> null
+      - id                       = "sgrule-2349838650" -> null
+      - protocol                 = "tcp" -> null
+      - region                   = "us-east-1" -> null
+      - security_group_id        = "sg-0f7a4489a1b420753" -> null
+      - security_group_rule_id   = "sgr-07def36316d0a1e4f" -> null
+      - self                     = false -> null
+      - source_security_group_id = "sg-034eb272f548bf4e8" -> null
+      - to_port                  = 443 -> null
+      - type                     = "ingress" -> null
+    }
+
+  # module.eks.aws_security_group_rule.node["ingress_cluster_4443_webhook"] will be destroyed
+  - resource "aws_security_group_rule" "node" {
+      - description              = "Cluster API to node 4443/tcp webhook" -> null
+      - from_port                = 4443 -> null
+      - id                       = "sgrule-2431197207" -> null
+      - protocol                 = "tcp" -> null
+      - region                   = "us-east-1" -> null
+      - security_group_id        = "sg-0f7a4489a1b420753" -> null
+      - security_group_rule_id   = "sgr-0f6e183efd738f391" -> null
+      - self                     = false -> null
+      - source_security_group_id = "sg-034eb272f548bf4e8" -> null
+      - to_port                  = 4443 -> null
+      - type                     = "ingress" -> null
+    }
+
+  # module.eks.aws_security_group_rule.node["ingress_cluster_6443_webhook"] will be destroyed
+  - resource "aws_security_group_rule" "node" {
+      - description              = "Cluster API to node 6443/tcp webhook" -> null
+      - from_port                = 6443 -> null
+      - id                       = "sgrule-1504397185" -> null
+      - protocol                 = "tcp" -> null
+      - region                   = "us-east-1" -> null
+      - security_group_id        = "sg-0f7a4489a1b420753" -> null
+      - security_group_rule_id   = "sgr-03074d2173293caf4" -> null
+      - self                     = false -> null
+      - source_security_group_id = "sg-034eb272f548bf4e8" -> null
+      - to_port                  = 6443 -> null
+      - type                     = "ingress" -> null
+    }
+
+  # module.eks.aws_security_group_rule.node["ingress_cluster_8443_webhook"] will be destroyed
+  - resource "aws_security_group_rule" "node" {
+      - description              = "Cluster API to node 8443/tcp webhook" -> null
+      - from_port                = 8443 -> null
+      - id                       = "sgrule-1257733024" -> null
+      - protocol                 = "tcp" -> null
+      - region                   = "us-east-1" -> null
+      - security_group_id        = "sg-0f7a4489a1b420753" -> null
+      - security_group_rule_id   = "sgr-07673d716430fe20a" -> null
+      - self                     = false -> null
+      - source_security_group_id = "sg-034eb272f548bf4e8" -> null
+      - to_port                  = 8443 -> null
+      - type                     = "ingress" -> null
+    }
+
+  # module.eks.aws_security_group_rule.node["ingress_cluster_9443_webhook"] will be destroyed
+  - resource "aws_security_group_rule" "node" {
+      - description              = "Cluster API to node 9443/tcp webhook" -> null
+      - from_port                = 9443 -> null
+      - id                       = "sgrule-777406571" -> null
+      - protocol                 = "tcp" -> null
+      - region                   = "us-east-1" -> null
+      - security_group_id        = "sg-0f7a4489a1b420753" -> null
+      - security_group_rule_id   = "sgr-033d0c59d844637fa" -> null
+      - self                     = false -> null
+      - source_security_group_id = "sg-034eb272f548bf4e8" -> null
+      - to_port                  = 9443 -> null
+      - type                     = "ingress" -> null
+    }
+
+  # module.eks.aws_security_group_rule.node["ingress_cluster_kubelet"] will be destroyed
+  - resource "aws_security_group_rule" "node" {
+      - description              = "Cluster API to node kubelets" -> null
+      - from_port                = 10250 -> null
+      - id                       = "sgrule-2360152642" -> null
+      - protocol                 = "tcp" -> null
+      - region                   = "us-east-1" -> null
+      - security_group_id        = "sg-0f7a4489a1b420753" -> null
+      - security_group_rule_id   = "sgr-03a85fc2f8c4c3f82" -> null
+      - self                     = false -> null
+      - source_security_group_id = "sg-034eb272f548bf4e8" -> null
+      - to_port                  = 10250 -> null
+      - type                     = "ingress" -> null
+    }
+
+  # module.eks.aws_security_group_rule.node["ingress_nodes_ephemeral"] will be destroyed
+  - resource "aws_security_group_rule" "node" {
+      - description            = "Node to node ingress on ephemeral ports" -> null
+      - from_port              = 1025 -> null
+      - id                     = "sgrule-4245694480" -> null
+      - protocol               = "tcp" -> null
+      - region                 = "us-east-1" -> null
+      - security_group_id      = "sg-0f7a4489a1b420753" -> null
+      - security_group_rule_id = "sgr-035c381e22b0dad79" -> null
+      - self                   = true -> null
+      - to_port                = 65535 -> null
+      - type                   = "ingress" -> null
+    }
+
+  # module.eks.aws_security_group_rule.node["ingress_self_coredns_tcp"] will be destroyed
+  - resource "aws_security_group_rule" "node" {
+      - description            = "Node to node CoreDNS" -> null
+      - from_port              = 53 -> null
+      - id                     = "sgrule-2049426111" -> null
+      - protocol               = "tcp" -> null
+      - region                 = "us-east-1" -> null
+      - security_group_id      = "sg-0f7a4489a1b420753" -> null
+      - security_group_rule_id = "sgr-0f962566c49690822" -> null
+      - self                   = true -> null
+      - to_port                = 53 -> null
+      - type                   = "ingress" -> null
+    }
+
+  # module.eks.aws_security_group_rule.node["ingress_self_coredns_udp"] will be destroyed
+  - resource "aws_security_group_rule" "node" {
+      - description            = "Node to node CoreDNS UDP" -> null
+      - from_port              = 53 -> null
+      - id                     = "sgrule-3732431184" -> null
+      - protocol               = "udp" -> null
+      - region                 = "us-east-1" -> null
+      - security_group_id      = "sg-0f7a4489a1b420753" -> null
+      - security_group_rule_id = "sgr-0e880e72a924e33cc" -> null
+      - self                   = true -> null
+      - to_port                = 53 -> null
+      - type                   = "ingress" -> null
+    }
+
+  # module.eks.time_sleep.this[0] will be destroyed
+  - resource "time_sleep" "this" {
+      - create_duration = "30s" -> null
+      - id              = "2026-08-18T07:03:45Z" -> null
+      - triggers        = {
+          - "certificate_authority_data" = "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUREakNDQWZhZ0F3SUJBZ0lSQU04ZFhXeXlpYmdkSjhhemxJVnhhTXd3RFFZSktvWklodmNOQVFFTEJRQXcKRlRFVE1CRUdBMVVFQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB5TmpBNE1UZ3dOalV4TVRGYUZ3MHpOakE0TVRVdwpOalV4TVRGYU1CVXhFekFSQmdOVkJBTVRDbXQxWW1WeWJtVjBaWE13Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBCkE0SUJEd0F3Z2dFS0FvSUJBUUNYekM0aDJsYVUvZ3VsZ1pUT20vYUhYMzJ4MXlNVGt5MUU5ZjNTaVRCOTY4ZzEKcTFrNjdmazZMblBQeC9iK1JTQmhwRDBWR2pFS1NrdUcvSnUrQW9NMm1tcTFNZEQvZUdYZ09ld0JsQ0VjWHZ1SQo2YU4rU0M0d2YyRXB2REQzNFcybFdBVHFzRW9TbjNwbkRJdWRPU2JFOFdwbXNkcUQ0YTZMUlM4Ukt4anZQamk3CmpqRFNTaHRrVTNnYTNUWWZwWjVRaDRwQTVhNkQxSm12NHdwbmxDR3dXOWtBdWRsb256QU1uNGtMUnBVd2U4S1EKVzZGSFBZS0V3clExLzRtN0xYY0w0cHlwNzZmekRCS2FMdkRaRzZzODNxOVQxTzJiRmpjV3dPRnVuQ3Vzb01JaQpZMlNoRk9TM3F5NktsNTVFaUgrWXBwdDhLN21LVWxIRCtmcVJPMjkzQWdNQkFBR2pXVEJYTUE0R0ExVWREd0VCCi93UUVBd0lDcERBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJRc2J6c3JibWxpMm9lV0Z0cUEKSnUzWklka3IyekFWQmdOVkhSRUVEakFNZ2dwcmRXSmxjbTVsZEdWek1BMEdDU3FHU0liM0RRRUJDd1VBQTRJQgpBUUJFZzF6L3BiSE5FUnhHQ0xmbm9iMncvaXFEL1ZRaUQ0a2phc0JWTHdTbDJhVjBCUzZzVS8vRkpCZTBadVJHCkVzKzZtMGVJbzNOcU1Cd2VUNzVjL1hVeVVvVmUyUWhPeTFWTG9MNWI0YTBacGhKbzN4UUVVbnFaNXRWelVHNWMKOGFQWXRUU2lKWXh5c05pRHg3OXN3VDFUNkRIK3BMRnBxb1U5c3hPWVdaQVUzRStNN2UyRHlreUNnRnFTUmZLWgp1K0dGNm1lVVd1dFR1bCs2Z0tjUndVN3J3OThuUDNKMDZXOGxoZDNZWmxURFA3dm5LNzgxMnFKRnR5bG9wRDBhCktQdTVYc0pTSlFqM1hKQmlqRzNaT05hNlB1NDBJRnJxQmpWK1NiUlMzNTJwVWIxT1lsa3gweFpiKzhvZGJIZTMKKzFJNEV4RVJtZi9hOFBXSzQ5MW94b2R4Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"
+          - "endpoint"                   = "https://9D6D0DE8DEC421852DDEB1691CCB9255.gr7.us-east-1.eks.amazonaws.com"
+          - "kubernetes_version"         = "1.33"
+          - "name"                       = "marketsphere-dev-eks"
+          - "service_cidr"               = "172.20.0.0/16"
+        } -> null
+    }
+
+  # module.vpc.aws_default_network_acl.this[0] will be destroyed
+  - resource "aws_default_network_acl" "this" {
+      - arn                    = "arn:aws:ec2:us-east-1:277140629583:network-acl/acl-09d78e6d583ac1e8c" -> null
+      - default_network_acl_id = "acl-09d78e6d583ac1e8c" -> null
+      - id                     = "acl-09d78e6d583ac1e8c" -> null
+      - owner_id               = "277140629583" -> null
+      - region                 = "us-east-1" -> null
+      - subnet_ids             = [
+          - "subnet-09580b0092ca3178f",
+          - "subnet-0b472ce7b094e2c70",
+          - "subnet-0e049aab022c7ea00",
+          - "subnet-0e30232f926afeeec",
+        ] -> null
+      - tags                   = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-vpc-default"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all               = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-vpc-default"
+          - "Project"     = "marketsphere"
+        } -> null
+      - vpc_id                 = "vpc-0f06accd4e12eb7f4" -> null
+
+      - egress {
+          - action          = "allow" -> null
+          - from_port       = 0 -> null
+          - icmp_code       = 0 -> null
+          - icmp_type       = 0 -> null
+          - ipv6_cidr_block = "::/0" -> null
+          - protocol        = "-1" -> null
+          - rule_no         = 101 -> null
+          - to_port         = 0 -> null
+            # (1 unchanged attribute hidden)
+        }
+      - egress {
+          - action          = "allow" -> null
+          - cidr_block      = "0.0.0.0/0" -> null
+          - from_port       = 0 -> null
+          - icmp_code       = 0 -> null
+          - icmp_type       = 0 -> null
+          - protocol        = "-1" -> null
+          - rule_no         = 100 -> null
+          - to_port         = 0 -> null
+            # (1 unchanged attribute hidden)
+        }
+
+      - ingress {
+          - action          = "allow" -> null
+          - from_port       = 0 -> null
+          - icmp_code       = 0 -> null
+          - icmp_type       = 0 -> null
+          - ipv6_cidr_block = "::/0" -> null
+          - protocol        = "-1" -> null
+          - rule_no         = 101 -> null
+          - to_port         = 0 -> null
+            # (1 unchanged attribute hidden)
+        }
+      - ingress {
+          - action          = "allow" -> null
+          - cidr_block      = "0.0.0.0/0" -> null
+          - from_port       = 0 -> null
+          - icmp_code       = 0 -> null
+          - icmp_type       = 0 -> null
+          - protocol        = "-1" -> null
+          - rule_no         = 100 -> null
+          - to_port         = 0 -> null
+            # (1 unchanged attribute hidden)
+        }
+    }
+
+  # module.vpc.aws_default_route_table.default[0] will be destroyed
+  - resource "aws_default_route_table" "default" {
+      - arn                    = "arn:aws:ec2:us-east-1:277140629583:route-table/rtb-045d6be4ec7d4afd1" -> null
+      - default_route_table_id = "rtb-045d6be4ec7d4afd1" -> null
+      - id                     = "rtb-045d6be4ec7d4afd1" -> null
+      - owner_id               = "277140629583" -> null
+      - propagating_vgws       = [] -> null
+      - region                 = "us-east-1" -> null
+      - route                  = [] -> null
+      - tags                   = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-vpc-default"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all               = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-vpc-default"
+          - "Project"     = "marketsphere"
+        } -> null
+      - vpc_id                 = "vpc-0f06accd4e12eb7f4" -> null
+
+      - timeouts {
+          - create = "5m" -> null
+          - update = "5m" -> null
+        }
+    }
+
+  # module.vpc.aws_default_security_group.this[0] will be destroyed
+  - resource "aws_default_security_group" "this" {
+      - arn                    = "arn:aws:ec2:us-east-1:277140629583:security-group/sg-022b4d57a1c1573ed" -> null
+      - description            = "default VPC security group" -> null
+      - egress                 = [] -> null
+      - id                     = "sg-022b4d57a1c1573ed" -> null
+      - ingress                = [] -> null
+      - name                   = "default" -> null
+      - owner_id               = "277140629583" -> null
+      - region                 = "us-east-1" -> null
+      - revoke_rules_on_delete = false -> null
+      - tags                   = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-vpc-default"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all               = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-vpc-default"
+          - "Project"     = "marketsphere"
+        } -> null
+      - vpc_id                 = "vpc-0f06accd4e12eb7f4" -> null
+        # (1 unchanged attribute hidden)
+    }
+
+  # module.vpc.aws_eip.nat[0] will be destroyed
+  - resource "aws_eip" "nat" {
+      - allocation_id            = "eipalloc-0f7ad9e960aaf4997" -> null
+      - arn                      = "arn:aws:ec2:us-east-1:277140629583:elastic-ip/eipalloc-0f7ad9e960aaf4997" -> null
+      - association_id           = "eipassoc-087af89b5de95c905" -> null
+      - domain                   = "vpc" -> null
+      - id                       = "eipalloc-0f7ad9e960aaf4997" -> null
+      - network_border_group     = "us-east-1" -> null
+      - network_interface        = "eni-0bfec65b66ba2cb38" -> null
+      - private_dns              = "ip-10-20-1-215.ec2.internal" -> null
+      - private_ip               = "10.20.1.215" -> null
+      - public_dns               = "ec2-100-56-27-71.compute-1.amazonaws.com" -> null
+      - public_ip                = "100.56.27.71" -> null
+      - public_ipv4_pool         = "amazon" -> null
+      - region                   = "us-east-1" -> null
+      - tags                     = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-vpc-us-east-1a"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all                 = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-vpc-us-east-1a"
+          - "Project"     = "marketsphere"
+        } -> null
+        # (6 unchanged attributes hidden)
+    }
+
+  # module.vpc.aws_internet_gateway.this[0] will be destroyed
+  - resource "aws_internet_gateway" "this" {
+      - arn      = "arn:aws:ec2:us-east-1:277140629583:internet-gateway/igw-049324511a2462617" -> null
+      - id       = "igw-049324511a2462617" -> null
+      - owner_id = "277140629583" -> null
+      - region   = "us-east-1" -> null
+      - tags     = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-vpc"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-vpc"
+          - "Project"     = "marketsphere"
+        } -> null
+      - vpc_id   = "vpc-0f06accd4e12eb7f4" -> null
+    }
+
+  # module.vpc.aws_nat_gateway.this[0] will be destroyed
+  - resource "aws_nat_gateway" "this" {
+      - allocation_id                      = "eipalloc-0f7ad9e960aaf4997" -> null
+      - association_id                     = "eipassoc-087af89b5de95c905" -> null
+      - availability_mode                  = "zonal" -> null
+      - connectivity_type                  = "public" -> null
+      - id                                 = "nat-051757c213973d02c" -> null
+      - network_interface_id               = "eni-0bfec65b66ba2cb38" -> null
+      - private_ip                         = "10.20.1.215" -> null
+      - public_ip                          = "100.56.27.71" -> null
+      - region                             = "us-east-1" -> null
+      - regional_nat_gateway_address       = [] -> null
+      - secondary_allocation_ids           = [] -> null
+      - secondary_private_ip_address_count = 0 -> null
+      - secondary_private_ip_addresses     = [] -> null
+      - subnet_id                          = "subnet-0e049aab022c7ea00" -> null
+      - tags                               = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-vpc-us-east-1a"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all                           = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-vpc-us-east-1a"
+          - "Project"     = "marketsphere"
+        } -> null
+      - vpc_id                             = "vpc-0f06accd4e12eb7f4" -> null
+    }
+
+  # module.vpc.aws_route.private_nat_gateway[0] will be destroyed
+  - resource "aws_route" "private_nat_gateway" {
+      - destination_cidr_block      = "0.0.0.0/0" -> null
+      - id                          = "r-rtb-0e14242efa1de69881080289494" -> null
+      - nat_gateway_id              = "nat-051757c213973d02c" -> null
+      - origin                      = "CreateRoute" -> null
+      - region                      = "us-east-1" -> null
+      - route_table_id              = "rtb-0e14242efa1de6988" -> null
+      - state                       = "active" -> null
+        # (14 unchanged attributes hidden)
+
+      - timeouts {
+          - create = "5m" -> null
+        }
+    }
+
+  # module.vpc.aws_route.public_internet_gateway[0] will be destroyed
+  - resource "aws_route" "public_internet_gateway" {
+      - destination_cidr_block      = "0.0.0.0/0" -> null
+      - gateway_id                  = "igw-049324511a2462617" -> null
+      - id                          = "r-rtb-0744edb459a79b1011080289494" -> null
+      - origin                      = "CreateRoute" -> null
+      - region                      = "us-east-1" -> null
+      - route_table_id              = "rtb-0744edb459a79b101" -> null
+      - state                       = "active" -> null
+        # (14 unchanged attributes hidden)
+
+      - timeouts {
+          - create = "5m" -> null
+        }
+    }
+
+  # module.vpc.aws_route_table.private[0] will be destroyed
+  - resource "aws_route_table" "private" {
+      - arn              = "arn:aws:ec2:us-east-1:277140629583:route-table/rtb-0e14242efa1de6988" -> null
+      - id               = "rtb-0e14242efa1de6988" -> null
+      - owner_id         = "277140629583" -> null
+      - propagating_vgws = [] -> null
+      - region           = "us-east-1" -> null
+      - route            = [
+          - {
+              - cidr_block                 = "0.0.0.0/0"
+              - nat_gateway_id             = "nat-051757c213973d02c"
+                # (12 unchanged attributes hidden)
+            },
+        ] -> null
+      - tags             = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-vpc-private"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all         = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-vpc-private"
+          - "Project"     = "marketsphere"
+        } -> null
+      - vpc_id           = "vpc-0f06accd4e12eb7f4" -> null
+    }
+
+  # module.vpc.aws_route_table.public[0] will be destroyed
+  - resource "aws_route_table" "public" {
+      - arn              = "arn:aws:ec2:us-east-1:277140629583:route-table/rtb-0744edb459a79b101" -> null
+      - id               = "rtb-0744edb459a79b101" -> null
+      - owner_id         = "277140629583" -> null
+      - propagating_vgws = [] -> null
+      - region           = "us-east-1" -> null
+      - route            = [
+          - {
+              - cidr_block                 = "0.0.0.0/0"
+              - gateway_id                 = "igw-049324511a2462617"
+                # (12 unchanged attributes hidden)
+            },
+        ] -> null
+      - tags             = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-vpc-public"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all         = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-vpc-public"
+          - "Project"     = "marketsphere"
+        } -> null
+      - vpc_id           = "vpc-0f06accd4e12eb7f4" -> null
+    }
+
+  # module.vpc.aws_route_table_association.private[0] will be destroyed
+  - resource "aws_route_table_association" "private" {
+      - id             = "rtbassoc-021d81cce79bcf85f" -> null
+      - region         = "us-east-1" -> null
+      - route_table_id = "rtb-0e14242efa1de6988" -> null
+      - subnet_id      = "subnet-0e30232f926afeeec" -> null
+        # (1 unchanged attribute hidden)
+    }
+
+  # module.vpc.aws_route_table_association.private[1] will be destroyed
+  - resource "aws_route_table_association" "private" {
+      - id             = "rtbassoc-0db4b02d476c8541a" -> null
+      - region         = "us-east-1" -> null
+      - route_table_id = "rtb-0e14242efa1de6988" -> null
+      - subnet_id      = "subnet-09580b0092ca3178f" -> null
+        # (1 unchanged attribute hidden)
+    }
+
+  # module.vpc.aws_route_table_association.public[0] will be destroyed
+  - resource "aws_route_table_association" "public" {
+      - id             = "rtbassoc-03fa99a8cfcf07325" -> null
+      - region         = "us-east-1" -> null
+      - route_table_id = "rtb-0744edb459a79b101" -> null
+      - subnet_id      = "subnet-0e049aab022c7ea00" -> null
+        # (1 unchanged attribute hidden)
+    }
+
+  # module.vpc.aws_route_table_association.public[1] will be destroyed
+  - resource "aws_route_table_association" "public" {
+      - id             = "rtbassoc-0e674ea1e71a67186" -> null
+      - region         = "us-east-1" -> null
+      - route_table_id = "rtb-0744edb459a79b101" -> null
+      - subnet_id      = "subnet-0b472ce7b094e2c70" -> null
+        # (1 unchanged attribute hidden)
+    }
+
+  # module.vpc.aws_subnet.private[0] will be destroyed
+  - resource "aws_subnet" "private" {
+      - arn                                            = "arn:aws:ec2:us-east-1:277140629583:subnet/subnet-0e30232f926afeeec" -> null
+      - assign_ipv6_address_on_creation                = false -> null
+      - availability_zone                              = "us-east-1a" -> null
+      - availability_zone_id                           = "use1-az1" -> null
+      - cidr_block                                     = "10.20.11.0/24" -> null
+      - enable_dns64                                   = false -> null
+      - enable_lni_at_device_index                     = 0 -> null
+      - enable_resource_name_dns_a_record_on_launch    = false -> null
+      - enable_resource_name_dns_aaaa_record_on_launch = false -> null
+      - id                                             = "subnet-0e30232f926afeeec" -> null
+      - ipv6_native                                    = false -> null
+      - map_customer_owned_ip_on_launch                = false -> null
+      - map_public_ip_on_launch                        = false -> null
+      - owner_id                                       = "277140629583" -> null
+      - private_dns_hostname_type_on_launch            = "ip-name" -> null
+      - region                                         = "us-east-1" -> null
+      - tags                                           = {
+          - "Environment"                     = "dev"
+          - "ManagedBy"                       = "terraform"
+          - "Name"                            = "marketsphere-dev-vpc-private-us-east-1a"
+          - "Project"                         = "marketsphere"
+          - "kubernetes.io/role/internal-elb" = "1"
+        } -> null
+      - tags_all                                       = {
+          - "Environment"                     = "dev"
+          - "ManagedBy"                       = "terraform"
+          - "Name"                            = "marketsphere-dev-vpc-private-us-east-1a"
+          - "Project"                         = "marketsphere"
+          - "kubernetes.io/role/internal-elb" = "1"
+        } -> null
+      - vpc_id                                         = "vpc-0f06accd4e12eb7f4" -> null
+        # (4 unchanged attributes hidden)
+    }
+
+  # module.vpc.aws_subnet.private[1] will be destroyed
+  - resource "aws_subnet" "private" {
+      - arn                                            = "arn:aws:ec2:us-east-1:277140629583:subnet/subnet-09580b0092ca3178f" -> null
+      - assign_ipv6_address_on_creation                = false -> null
+      - availability_zone                              = "us-east-1b" -> null
+      - availability_zone_id                           = "use1-az2" -> null
+      - cidr_block                                     = "10.20.12.0/24" -> null
+      - enable_dns64                                   = false -> null
+      - enable_lni_at_device_index                     = 0 -> null
+      - enable_resource_name_dns_a_record_on_launch    = false -> null
+      - enable_resource_name_dns_aaaa_record_on_launch = false -> null
+      - id                                             = "subnet-09580b0092ca3178f" -> null
+      - ipv6_native                                    = false -> null
+      - map_customer_owned_ip_on_launch                = false -> null
+      - map_public_ip_on_launch                        = false -> null
+      - owner_id                                       = "277140629583" -> null
+      - private_dns_hostname_type_on_launch            = "ip-name" -> null
+      - region                                         = "us-east-1" -> null
+      - tags                                           = {
+          - "Environment"                     = "dev"
+          - "ManagedBy"                       = "terraform"
+          - "Name"                            = "marketsphere-dev-vpc-private-us-east-1b"
+          - "Project"                         = "marketsphere"
+          - "kubernetes.io/role/internal-elb" = "1"
+        } -> null
+      - tags_all                                       = {
+          - "Environment"                     = "dev"
+          - "ManagedBy"                       = "terraform"
+          - "Name"                            = "marketsphere-dev-vpc-private-us-east-1b"
+          - "Project"                         = "marketsphere"
+          - "kubernetes.io/role/internal-elb" = "1"
+        } -> null
+      - vpc_id                                         = "vpc-0f06accd4e12eb7f4" -> null
+        # (4 unchanged attributes hidden)
+    }
+
+  # module.vpc.aws_subnet.public[0] will be destroyed
+  - resource "aws_subnet" "public" {
+      - arn                                            = "arn:aws:ec2:us-east-1:277140629583:subnet/subnet-0e049aab022c7ea00" -> null
+      - assign_ipv6_address_on_creation                = false -> null
+      - availability_zone                              = "us-east-1a" -> null
+      - availability_zone_id                           = "use1-az1" -> null
+      - cidr_block                                     = "10.20.1.0/24" -> null
+      - enable_dns64                                   = false -> null
+      - enable_lni_at_device_index                     = 0 -> null
+      - enable_resource_name_dns_a_record_on_launch    = false -> null
+      - enable_resource_name_dns_aaaa_record_on_launch = false -> null
+      - id                                             = "subnet-0e049aab022c7ea00" -> null
+      - ipv6_native                                    = false -> null
+      - map_customer_owned_ip_on_launch                = false -> null
+      - map_public_ip_on_launch                        = false -> null
+      - owner_id                                       = "277140629583" -> null
+      - private_dns_hostname_type_on_launch            = "ip-name" -> null
+      - region                                         = "us-east-1" -> null
+      - tags                                           = {
+          - "Environment"            = "dev"
+          - "ManagedBy"              = "terraform"
+          - "Name"                   = "marketsphere-dev-vpc-public-us-east-1a"
+          - "Project"                = "marketsphere"
+          - "kubernetes.io/role/elb" = "1"
+        } -> null
+      - tags_all                                       = {
+          - "Environment"            = "dev"
+          - "ManagedBy"              = "terraform"
+          - "Name"                   = "marketsphere-dev-vpc-public-us-east-1a"
+          - "Project"                = "marketsphere"
+          - "kubernetes.io/role/elb" = "1"
+        } -> null
+      - vpc_id                                         = "vpc-0f06accd4e12eb7f4" -> null
+        # (4 unchanged attributes hidden)
+    }
+
+  # module.vpc.aws_subnet.public[1] will be destroyed
+  - resource "aws_subnet" "public" {
+      - arn                                            = "arn:aws:ec2:us-east-1:277140629583:subnet/subnet-0b472ce7b094e2c70" -> null
+      - assign_ipv6_address_on_creation                = false -> null
+      - availability_zone                              = "us-east-1b" -> null
+      - availability_zone_id                           = "use1-az2" -> null
+      - cidr_block                                     = "10.20.2.0/24" -> null
+      - enable_dns64                                   = false -> null
+      - enable_lni_at_device_index                     = 0 -> null
+      - enable_resource_name_dns_a_record_on_launch    = false -> null
+      - enable_resource_name_dns_aaaa_record_on_launch = false -> null
+      - id                                             = "subnet-0b472ce7b094e2c70" -> null
+      - ipv6_native                                    = false -> null
+      - map_customer_owned_ip_on_launch                = false -> null
+      - map_public_ip_on_launch                        = false -> null
+      - owner_id                                       = "277140629583" -> null
+      - private_dns_hostname_type_on_launch            = "ip-name" -> null
+      - region                                         = "us-east-1" -> null
+      - tags                                           = {
+          - "Environment"            = "dev"
+          - "ManagedBy"              = "terraform"
+          - "Name"                   = "marketsphere-dev-vpc-public-us-east-1b"
+          - "Project"                = "marketsphere"
+          - "kubernetes.io/role/elb" = "1"
+        } -> null
+      - tags_all                                       = {
+          - "Environment"            = "dev"
+          - "ManagedBy"              = "terraform"
+          - "Name"                   = "marketsphere-dev-vpc-public-us-east-1b"
+          - "Project"                = "marketsphere"
+          - "kubernetes.io/role/elb" = "1"
+        } -> null
+      - vpc_id                                         = "vpc-0f06accd4e12eb7f4" -> null
+        # (4 unchanged attributes hidden)
+    }
+
+  # module.vpc.aws_vpc.this[0] will be destroyed
+  - resource "aws_vpc" "this" {
+      - arn                                  = "arn:aws:ec2:us-east-1:277140629583:vpc/vpc-0f06accd4e12eb7f4" -> null
+      - assign_generated_ipv6_cidr_block     = false -> null
+      - cidr_block                           = "10.20.0.0/16" -> null
+      - default_network_acl_id               = "acl-09d78e6d583ac1e8c" -> null
+      - default_route_table_id               = "rtb-045d6be4ec7d4afd1" -> null
+      - default_security_group_id            = "sg-022b4d57a1c1573ed" -> null
+      - dhcp_options_id                      = "dopt-0ef420244f25e3aa1" -> null
+      - enable_dns_hostnames                 = true -> null
+      - enable_dns_support                   = true -> null
+      - enable_network_address_usage_metrics = false -> null
+      - id                                   = "vpc-0f06accd4e12eb7f4" -> null
+      - instance_tenancy                     = "default" -> null
+      - ipv6_netmask_length                  = 0 -> null
+      - main_route_table_id                  = "rtb-045d6be4ec7d4afd1" -> null
+      - owner_id                             = "277140629583" -> null
+      - region                               = "us-east-1" -> null
+      - tags                                 = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-vpc"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all                             = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-vpc"
+          - "Project"     = "marketsphere"
+        } -> null
+        # (4 unchanged attributes hidden)
+    }
+
+  # module.eks.module.eks_managed_node_group["general"].aws_eks_node_group.this[0] will be destroyed
+  - resource "aws_eks_node_group" "this" {
+      - ami_type               = "AL2023_x86_64_STANDARD" -> null
+      - arn                    = "arn:aws:eks:us-east-1:277140629583:nodegroup/marketsphere-dev-eks/marketsphere-dev-ng-ad7dabc974a35d44672026895b/b8d009d6-3403-9076-b7b7-f969dd5f62ad" -> null
+      - capacity_type          = "ON_DEMAND" -> null
+      - cluster_name           = "marketsphere-dev-eks" -> null
+      - disk_size              = 0 -> null
+      - id                     = "marketsphere-dev-eks:marketsphere-dev-ng-ad7dabc974a35d44672026895b" -> null
+      - instance_types         = [
+          - "t3.small",
+        ] -> null
+      - labels                 = {} -> null
+      - node_group_name        = "marketsphere-dev-ng-ad7dabc974a35d44672026895b" -> null
+      - node_group_name_prefix = "marketsphere-dev-ng-" -> null
+      - node_role_arn          = "arn:aws:iam::277140629583:role/marketsphere-dev-ng-eks-node-group-49cbbe63c62753106977ac25e4" -> null
+      - region                 = "us-east-1" -> null
+      - release_version        = "1.33.13-20260818" -> null
+      - resources              = [
+          - {
+              - autoscaling_groups              = [
+                  - {
+                      - name = "eks-marketsphere-dev-ng-ad7dabc974a35d44672026895b-b8d009d6-3403-9076-b7b7-f969dd5f62ad"
+                    },
+                ]
+                # (1 unchanged attribute hidden)
+            },
+        ] -> null
+      - status                 = "ACTIVE" -> null
+      - subnet_ids             = [
+          - "subnet-09580b0092ca3178f",
+          - "subnet-0e30232f926afeeec",
+        ] -> null
+      - tags                   = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-ng"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all               = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "marketsphere-dev-ng"
+          - "Project"     = "marketsphere"
+        } -> null
+      - version                = "1.33" -> null
+
+      - launch_template {
+          - id      = "lt-04e57078bf8e97150" -> null
+          - name    = "general-1e3d3d384cca67fe4defb97a2f" -> null
+          - version = "1" -> null
+        }
+
+      - scaling_config {
+          - desired_size = 1 -> null
+          - max_size     = 1 -> null
+          - min_size     = 1 -> null
+        }
+
+      - update_config {
+          - max_unavailable            = 0 -> null
+          - max_unavailable_percentage = 33 -> null
+            # (1 unchanged attribute hidden)
+        }
+    }
+
+  # module.eks.module.eks_managed_node_group["general"].aws_iam_role.this[0] will be destroyed
+  - resource "aws_iam_role" "this" {
+      - arn                   = "arn:aws:iam::277140629583:role/marketsphere-dev-ng-eks-node-group-49cbbe63c62753106977ac25e4" -> null
+      - assume_role_policy    = jsonencode(
+            {
+              - Statement = [
+                  - {
+                      - Action    = "sts:AssumeRole"
+                      - Effect    = "Allow"
+                      - Principal = {
+                          - Service = "ec2.amazonaws.com"
+                        }
+                      - Sid       = "EKSNodeAssumeRole"
+                    },
+                ]
+              - Version   = "2012-10-17"
+            }
+        ) -> null
+      - create_date           = "2026-08-18T06:50:32Z" -> null
+      - description           = "EKS managed node group IAM role" -> null
+      - force_detach_policies = true -> null
+      - id                    = "marketsphere-dev-ng-eks-node-group-49cbbe63c62753106977ac25e4" -> null
+      - managed_policy_arns   = [
+          - "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
+          - "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
+          - "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy",
+        ] -> null
+      - max_session_duration  = 3600 -> null
+      - name                  = "marketsphere-dev-ng-eks-node-group-49cbbe63c62753106977ac25e4" -> null
+      - name_prefix           = "marketsphere-dev-ng-eks-node-group-" -> null
+      - path                  = "/" -> null
+      - tags                  = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all              = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "marketsphere"
+        } -> null
+      - unique_id             = "AROAUBBW6NBHVW6GZZ3OX" -> null
+        # (1 unchanged attribute hidden)
+    }
+
+  # module.eks.module.eks_managed_node_group["general"].aws_iam_role_policy_attachment.this["AmazonEC2ContainerRegistryReadOnly"] will be destroyed
+  - resource "aws_iam_role_policy_attachment" "this" {
+      - id         = "marketsphere-dev-ng-eks-node-group-49cbbe63c62753106977ac25e4/arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly" -> null
+      - policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly" -> null
+      - role       = "marketsphere-dev-ng-eks-node-group-49cbbe63c62753106977ac25e4" -> null
+    }
+
+  # module.eks.module.eks_managed_node_group["general"].aws_iam_role_policy_attachment.this["AmazonEKSWorkerNodePolicy"] will be destroyed
+  - resource "aws_iam_role_policy_attachment" "this" {
+      - id         = "marketsphere-dev-ng-eks-node-group-49cbbe63c62753106977ac25e4/arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy" -> null
+      - policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy" -> null
+      - role       = "marketsphere-dev-ng-eks-node-group-49cbbe63c62753106977ac25e4" -> null
+    }
+
+  # module.eks.module.eks_managed_node_group["general"].aws_iam_role_policy_attachment.this["AmazonEKS_CNI_Policy"] will be destroyed
+  - resource "aws_iam_role_policy_attachment" "this" {
+      - id         = "marketsphere-dev-ng-eks-node-group-49cbbe63c62753106977ac25e4/arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy" -> null
+      - policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy" -> null
+      - role       = "marketsphere-dev-ng-eks-node-group-49cbbe63c62753106977ac25e4" -> null
+    }
+
+  # module.eks.module.eks_managed_node_group["general"].aws_launch_template.this[0] will be destroyed
+  - resource "aws_launch_template" "this" {
+      - arn                                  = "arn:aws:ec2:us-east-1:277140629583:launch-template/lt-04e57078bf8e97150" -> null
+      - default_version                      = 1 -> null
+      - description                          = "Custom launch template for marketsphere-dev-ng EKS managed node group" -> null
+      - disable_api_stop                     = false -> null
+      - disable_api_termination              = false -> null
+      - id                                   = "lt-04e57078bf8e97150" -> null
+      - latest_version                       = 1 -> null
+      - name                                 = "general-1e3d3d384cca67fe4defb97a2f" -> null
+      - name_prefix                          = "general-" -> null
+      - region                               = "us-east-1" -> null
+      - security_group_names                 = [] -> null
+      - tags                                 = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all                             = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "marketsphere"
+        } -> null
+      - update_default_version               = true -> null
+      - vpc_security_group_ids               = [
+          - "sg-0f7a4489a1b420753",
+        ] -> null
+        # (8 unchanged attributes hidden)
+
+      - metadata_options {
+          - http_endpoint               = "enabled" -> null
+          - http_put_response_hop_limit = 1 -> null
+          - http_tokens                 = "required" -> null
+            # (2 unchanged attributes hidden)
+        }
+
+      - tag_specifications {
+          - resource_type = "instance" -> null
+          - tags          = {
+              - "Environment" = "dev"
+              - "ManagedBy"   = "terraform"
+              - "Name"        = "marketsphere-dev-ng"
+              - "Project"     = "marketsphere"
+            } -> null
+        }
+      - tag_specifications {
+          - resource_type = "network-interface" -> null
+          - tags          = {
+              - "Environment" = "dev"
+              - "ManagedBy"   = "terraform"
+              - "Name"        = "marketsphere-dev-ng"
+              - "Project"     = "marketsphere"
+            } -> null
+        }
+      - tag_specifications {
+          - resource_type = "volume" -> null
+          - tags          = {
+              - "Environment" = "dev"
+              - "ManagedBy"   = "terraform"
+              - "Name"        = "marketsphere-dev-ng"
+              - "Project"     = "marketsphere"
+            } -> null
+        }
+    }
+
+  # module.eks.module.kms.aws_kms_alias.this["cluster"] will be destroyed
+  - resource "aws_kms_alias" "this" {
+      - arn            = "arn:aws:kms:us-east-1:277140629583:alias/eks/marketsphere-dev-eks" -> null
+      - id             = "alias/eks/marketsphere-dev-eks" -> null
+      - name           = "alias/eks/marketsphere-dev-eks" -> null
+      - region         = "us-east-1" -> null
+      - target_key_arn = "arn:aws:kms:us-east-1:277140629583:key/9ddc392b-42bf-4efb-9524-f6ba1f8f64ad" -> null
+      - target_key_id  = "9ddc392b-42bf-4efb-9524-f6ba1f8f64ad" -> null
+        # (1 unchanged attribute hidden)
+    }
+
+  # module.eks.module.kms.aws_kms_key.this[0] will be destroyed
+  - resource "aws_kms_key" "this" {
+      - arn                                = "arn:aws:kms:us-east-1:277140629583:key/9ddc392b-42bf-4efb-9524-f6ba1f8f64ad" -> null
+      - bypass_policy_lockout_safety_check = false -> null
+      - customer_master_key_spec           = "SYMMETRIC_DEFAULT" -> null
+      - description                        = "marketsphere-dev-eks cluster encryption key" -> null
+      - enable_key_rotation                = true -> null
+      - id                                 = "9ddc392b-42bf-4efb-9524-f6ba1f8f64ad" -> null
+      - is_enabled                         = true -> null
+      - key_id                             = "9ddc392b-42bf-4efb-9524-f6ba1f8f64ad" -> null
+      - key_usage                          = "ENCRYPT_DECRYPT" -> null
+      - multi_region                       = false -> null
+      - policy                             = jsonencode(
+            {
+              - Statement = [
+                  - {
+                      - Action    = "kms:*"
+                      - Effect    = "Allow"
+                      - Principal = {
+                          - AWS = "arn:aws:iam::277140629583:root"
+                        }
+                      - Resource  = "*"
+                      - Sid       = "Default"
+                    },
+                  - {
+                      - Action    = [
+                          - "kms:Update*",
+                          - "kms:UntagResource",
+                          - "kms:TagResource",
+                          - "kms:ScheduleKeyDeletion",
+                          - "kms:Revoke*",
+                          - "kms:ReplicateKey",
+                          - "kms:Put*",
+                          - "kms:List*",
+                          - "kms:ImportKeyMaterial",
+                          - "kms:Get*",
+                          - "kms:Enable*",
+                          - "kms:Disable*",
+                          - "kms:Describe*",
+                          - "kms:Delete*",
+                          - "kms:Create*",
+                          - "kms:CancelKeyDeletion",
+                        ]
+                      - Effect    = "Allow"
+                      - Principal = {
+                          - AWS = "arn:aws:iam::277140629583:user/marketsphere-admin"
+                        }
+                      - Resource  = "*"
+                      - Sid       = "KeyAdministration"
+                    },
+                  - {
+                      - Action    = [
+                          - "kms:ReEncrypt*",
+                          - "kms:GenerateDataKey*",
+                          - "kms:Encrypt",
+                          - "kms:DescribeKey",
+                          - "kms:Decrypt",
+                        ]
+                      - Effect    = "Allow"
+                      - Principal = {
+                          - AWS = "arn:aws:iam::277140629583:role/marketsphere-dev-eks-cluster-f8b4f756285c6f0d342a5c8feb"
+                        }
+                      - Resource  = "*"
+                      - Sid       = "KeyUsage"
+                    },
+                ]
+              - Version   = "2012-10-17"
+            }
+        ) -> null
+      - region                             = "us-east-1" -> null
+      - rotation_period_in_days            = 365 -> null
+      - tags                               = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "marketsphere"
+        } -> null
+      - tags_all                           = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "marketsphere"
+        } -> null
+        # (2 unchanged attributes hidden)
+    }
+
+  # module.eks.module.eks_managed_node_group["general"].module.user_data.null_resource.validate_cluster_service_cidr will be destroyed
+  - resource "null_resource" "validate_cluster_service_cidr" {
+      - id = "6444769874838735226" -> null
+    }
+
+Plan: 0 to add, 0 to change, 62 to destroy.
+
+Changes to Outputs:
+  - availability_zones = [
+      - "us-east-1a",
+      - "us-east-1b",
+    ] -> null
+  - private_subnet_ids = [
+      - "subnet-0e30232f926afeeec",
+      - "subnet-09580b0092ca3178f",
+    ] -> null
+  - public_subnet_ids  = [
+      - "subnet-0e049aab022c7ea00",
+      - "subnet-0b472ce7b094e2c70",
+    ] -> null
+  - vpc_id             = "vpc-0f06accd4e12eb7f4" -> null

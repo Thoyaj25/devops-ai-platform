@@ -1,0 +1,12 @@
+NAMESPACE      NAME                                            READY   STATUS    RESTARTS   AGE     IP             NODE                          NOMINATED NODE   READINESS GATES
+kube-system    aws-load-balancer-controller-6bb94b68f4-6fdnl   1/1     Running   0          2d      10.20.12.148   ip-10-20-12-80.ec2.internal   <none>           <none>
+kube-system    aws-load-balancer-controller-6bb94b68f4-nq94w   1/1     Running   0          2d      10.20.12.12    ip-10-20-12-80.ec2.internal   <none>           <none>
+kube-system    aws-node-mhk92                                  2/2     Running   0          2d      10.20.12.80    ip-10-20-12-80.ec2.internal   <none>           <none>
+kube-system    coredns-9b7545fcd-5mcjf                         1/1     Running   0          2d      10.20.12.66    ip-10-20-12-80.ec2.internal   <none>           <none>
+kube-system    coredns-9b7545fcd-kjclv                         1/1     Running   0          2d      10.20.12.252   ip-10-20-12-80.ec2.internal   <none>           <none>
+kube-system    eks-pod-identity-agent-mpgwm                    1/1     Running   0          2d      10.20.12.80    ip-10-20-12-80.ec2.internal   <none>           <none>
+kube-system    kube-proxy-mr4sq                                1/1     Running   0          2d      10.20.12.80    ip-10-20-12-80.ec2.internal   <none>           <none>
+kube-system    metrics-server-7bfcdb4d86-s9mhg                 1/1     Running   0          2d      10.20.12.48    ip-10-20-12-80.ec2.internal   <none>           <none>
+marketsphere   marketsphere-app-54f85b7d6b-2975c               1/1     Running   0          9m35s   10.20.12.193   ip-10-20-12-80.ec2.internal   <none>           <none>
+marketsphere   marketsphere-redis-f69494794-df9cg              1/1     Running   0          2d      10.20.12.129   ip-10-20-12-80.ec2.internal   <none>           <none>
+marketsphere   marketsphere-worker-7c9f8d898-cxqnw             1/1     Running   0          9m34s   10.20.12.213   ip-10-20-12-80.ec2.internal   <none>           <none>

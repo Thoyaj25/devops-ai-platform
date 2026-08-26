@@ -1,0 +1,134 @@
+# module.vpc.aws_internet_gateway.this[0]:
+resource "aws_internet_gateway" "this" {
+    arn      = "arn:aws:ec2:us-east-1:277140629583:internet-gateway/igw-049324511a2462617"
+    id       = "igw-049324511a2462617"
+    owner_id = "277140629583"
+    region   = "us-east-1"
+    tags     = {
+        "Environment" = "dev"
+        "ManagedBy"   = "terraform"
+        "Name"        = "marketsphere-dev-vpc"
+        "Project"     = "marketsphere"
+    }
+    tags_all = {
+        "Environment" = "dev"
+        "ManagedBy"   = "terraform"
+        "Name"        = "marketsphere-dev-vpc"
+        "Project"     = "marketsphere"
+    }
+    vpc_id   = "vpc-0f06accd4e12eb7f4"
+}
+
+# module.vpc.aws_subnet.public[0]:
+resource "aws_subnet" "public" {
+    arn                                            = "arn:aws:ec2:us-east-1:277140629583:subnet/subnet-0e049aab022c7ea00"
+    assign_ipv6_address_on_creation                = false
+    availability_zone                              = "us-east-1a"
+    availability_zone_id                           = "use1-az1"
+    cidr_block                                     = "10.20.1.0/24"
+    customer_owned_ipv4_pool                       = null
+    enable_dns64                                   = false
+    enable_lni_at_device_index                     = 0
+    enable_resource_name_dns_a_record_on_launch    = false
+    enable_resource_name_dns_aaaa_record_on_launch = false
+    id                                             = "subnet-0e049aab022c7ea00"
+    ipv6_cidr_block                                = null
+    ipv6_cidr_block_association_id                 = null
+    ipv6_native                                    = false
+    map_customer_owned_ip_on_launch                = false
+    map_public_ip_on_launch                        = false
+    outpost_arn                                    = null
+    owner_id                                       = "277140629583"
+    private_dns_hostname_type_on_launch            = "ip-name"
+    region                                         = "us-east-1"
+    tags                                           = {
+        "Environment"            = "dev"
+        "ManagedBy"              = "terraform"
+        "Name"                   = "marketsphere-dev-vpc-public-us-east-1a"
+        "Project"                = "marketsphere"
+        "kubernetes.io/role/elb" = "1"
+    }
+    tags_all                                       = {
+        "Environment"            = "dev"
+        "ManagedBy"              = "terraform"
+        "Name"                   = "marketsphere-dev-vpc-public-us-east-1a"
+        "Project"                = "marketsphere"
+        "kubernetes.io/role/elb" = "1"
+    }
+    vpc_id                                         = "vpc-0f06accd4e12eb7f4"
+}
+
+# module.vpc.aws_subnet.public[1]:
+resource "aws_subnet" "public" {
+    arn                                            = "arn:aws:ec2:us-east-1:277140629583:subnet/subnet-0b472ce7b094e2c70"
+    assign_ipv6_address_on_creation                = false
+    availability_zone                              = "us-east-1b"
+    availability_zone_id                           = "use1-az2"
+    cidr_block                                     = "10.20.2.0/24"
+    customer_owned_ipv4_pool                       = null
+    enable_dns64                                   = false
+    enable_lni_at_device_index                     = 0
+    enable_resource_name_dns_a_record_on_launch    = false
+    enable_resource_name_dns_aaaa_record_on_launch = false
+    id                                             = "subnet-0b472ce7b094e2c70"
+    ipv6_cidr_block                                = null
+    ipv6_cidr_block_association_id                 = null
+    ipv6_native                                    = false
+    map_customer_owned_ip_on_launch                = false
+    map_public_ip_on_launch                        = false
+    outpost_arn                                    = null
+    owner_id                                       = "277140629583"
+    private_dns_hostname_type_on_launch            = "ip-name"
+    region                                         = "us-east-1"
+    tags                                           = {
+        "Environment"            = "dev"
+        "ManagedBy"              = "terraform"
+        "Name"                   = "marketsphere-dev-vpc-public-us-east-1b"
+        "Project"                = "marketsphere"
+        "kubernetes.io/role/elb" = "1"
+    }
+    tags_all                                       = {
+        "Environment"            = "dev"
+        "ManagedBy"              = "terraform"
+        "Name"                   = "marketsphere-dev-vpc-public-us-east-1b"
+        "Project"                = "marketsphere"
+        "kubernetes.io/role/elb" = "1"
+    }
+    vpc_id                                         = "vpc-0f06accd4e12eb7f4"
+}
+
+# module.vpc.aws_vpc.this[0]:
+resource "aws_vpc" "this" {
+    arn                                  = "arn:aws:ec2:us-east-1:277140629583:vpc/vpc-0f06accd4e12eb7f4"
+    assign_generated_ipv6_cidr_block     = false
+    cidr_block                           = "10.20.0.0/16"
+    default_network_acl_id               = "acl-09d78e6d583ac1e8c"
+    default_route_table_id               = "rtb-045d6be4ec7d4afd1"
+    default_security_group_id            = "sg-022b4d57a1c1573ed"
+    dhcp_options_id                      = "dopt-0ef420244f25e3aa1"
+    enable_dns_hostnames                 = true
+    enable_dns_support                   = true
+    enable_network_address_usage_metrics = false
+    id                                   = "vpc-0f06accd4e12eb7f4"
+    instance_tenancy                     = "default"
+    ipv6_association_id                  = null
+    ipv6_cidr_block                      = null
+    ipv6_cidr_block_network_border_group = null
+    ipv6_ipam_pool_id                    = null
+    ipv6_netmask_length                  = 0
+    main_route_table_id                  = "rtb-045d6be4ec7d4afd1"
+    owner_id                             = "277140629583"
+    region                               = "us-east-1"
+    tags                                 = {
+        "Environment" = "dev"
+        "ManagedBy"   = "terraform"
+        "Name"        = "marketsphere-dev-vpc"
+        "Project"     = "marketsphere"
+    }
+    tags_all                             = {
+        "Environment" = "dev"
+        "ManagedBy"   = "terraform"
+        "Name"        = "marketsphere-dev-vpc"
+        "Project"     = "marketsphere"
+    }
+}
