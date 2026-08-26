@@ -1,0 +1,48 @@
+MarketSphere Final Deployment State
+===================================
+
+Git commit:
+ce5c1d4 fix(kubernetes): support single-node rolling updates
+
+AWS Region:
+us-east-1
+
+EKS Cluster:
+marketsphere-dev-eks
+
+EKS Version:
+1.33
+
+Node:
+marketsphere-dev-ng
+Instance type:
+t3.small
+
+RDS:
+marketsphere-dev-postgres
+Engine:
+PostgreSQL 16
+Instance class:
+db.t3.micro
+
+Final RDS Snapshot:
+marketsphere-dev-postgres-final-20260826
+
+ALB:
+k8s-marketsp-marketsp-303126d1a5-310717306.us-east-1.elb.amazonaws.com
+
+Application:
+marketsphere-app
+
+Worker:
+marketsphere-worker
+
+Redis:
+marketsphere-redis
+
+Health endpoint:
+/api/health
+
+Final health result:
+HTTP 200
+{"status":"ok","service":"marketsphere-app"}
