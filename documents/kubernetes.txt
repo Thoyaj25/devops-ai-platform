@@ -1,0 +1,13 @@
+Kubernetes is an open-source container orchestration platform.
+
+Kubernetes automates the deployment, scaling, and management of containerized applications.
+
+A Kubernetes cluster consists of a control plane and worker nodes. The control plane manages the desired state of the cluster, while worker nodes run application workloads.
+
+Pods are the smallest deployable units in Kubernetes. A Pod can contain one or more containers that share networking and storage resources.
+
+Deployments provide declarative management for stateless applications and allow Kubernetes to maintain the desired number of Pod replicas.
+
+Services provide stable network access to applications running inside Pods.
+
+ConfigMaps store non-sensitive configuration data, while Secrets are designed for sensitive configuration values.
