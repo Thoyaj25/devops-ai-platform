@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 
+from app.bedrock import bedrock_service
 from app.config import settings
+from app.schemas import GenerateRequest, GenerateResponse
 
 
 app = FastAPI(
@@ -22,3 +24,12 @@ def health():
         "status": "healthy",
         "environment": settings.environment,
     }
+
+
+@app.post("/generate", response_model=GenerateResponse)
+def generate(request: GenerateRequest):
+    response = bedrock_service.generate(request.prompt)
+
+    return GenerateResponse(
+        response=response
+    )
