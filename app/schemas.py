@@ -7,3 +7,12 @@ class GenerateRequest(BaseModel):
 
 class GenerateResponse(BaseModel):
     response: str
+
+
+class AskRequest(BaseModel):
+    question: str
+    top_k: int = 3
+
+
+class AskResponse(BaseModel):
+    answer: str

@@ -7,7 +7,10 @@ class Settings(BaseSettings):
     environment: str = "development"
 
     aws_region: str = "us-east-1"
+
     bedrock_model_id: str = "us.anthropic.claude-sonnet-4-6"
+    embedding_model_id: str = "us.cohere.embed-v4:0"
+    embedding_dimension: int = 1536
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -11,7 +11,7 @@ class EmbeddingService:
             "bedrock-runtime",
             region_name=settings.aws_region,
         )
-        self.model_id = "us.cohere.embed-v4:0"
+        self.model_id = settings.embedding_model_id
 
     def embed_document(self, text: str) -> list[float]:
         return self._embed(text, "search_document")
