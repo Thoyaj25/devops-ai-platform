@@ -1,6 +1,20 @@
-def get_app_name() -> str:
-    return "AI Knowledge Assistant"
+from fastapi import FastAPI
+
+app = FastAPI(
+    title="AI Knowledge Assistant",
+    version="0.1.0",
+)
 
 
-if __name__ == "__main__":
-    print(get_app_name())
+@app.get("/")
+def root():
+    return {
+        "message": "AI Knowledge Assistant API is running"
+    }
+
+
+@app.get("/health")
+def health():
+    return {
+        "status": "healthy"
+    }
