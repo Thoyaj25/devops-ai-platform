@@ -45,3 +45,17 @@ cookies.txt
 
 nginx/conf.d/*.conf
 !nginx/conf.d/.gitkeep
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+*.tfstate
+*.tfstate.*
+
+# Terraform backup files
+*.before-eks
+
+# Temporary backup/debug files
+*.backup
+nginx-final.txt

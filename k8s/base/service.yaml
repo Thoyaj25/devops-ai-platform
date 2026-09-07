@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: marketsphere-app
+  labels:
+    app: marketsphere-app
+spec:
+  type: ClusterIP
+  selector:
+    app: marketsphere-app
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

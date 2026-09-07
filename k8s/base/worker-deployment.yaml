@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: marketsphere-worker
+  labels:
+    app: marketsphere-worker
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
+  selector:
+    matchLabels:
+      app: marketsphere-worker
+  template:
+    metadata:
+      labels:
+        app: marketsphere-worker
+    spec:
+      serviceAccountName: marketsphere-worker
+      volumes:
+        - name: rds-ca
+          configMap:
+            name: rds-ca
+      containers:
+        - name: marketsphere-worker
+          image: 277140629583.dkr.ecr.us-east-1.amazonaws.com/marketsphere-worker:k8s-test
+          imagePullPolicy: Always
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: NODE_EXTRA_CA_CERTS
+              value: "/etc/ssl/certs/rds-global-bundle.pem"
+            - name: DOCKER_IMAGE
+              value: "277140629583.dkr.ecr.us-east-1.amazonaws.com/marketsphere"
+            - name: KUBERNETES_DEPLOYMENT_IMAGE
+              value: "277140629583.dkr.ecr.us-east-1.amazonaws.com/marketsphere:eks-test"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: marketsphere-db
+                  key: DATABASE_URL
+            - name: REDIS_URL
+              value: "redis://marketsphere-redis:6379"
+          volumeMounts:
+            - name: rds-ca
+              mountPath: /etc/ssl/certs/rds-global-bundle.pem
+              subPath: rds-global-bundle.pem
+              readOnly: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

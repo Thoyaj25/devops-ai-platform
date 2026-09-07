@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: marketsphere-app
+  labels:
+    app: marketsphere-app
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
+  selector:
+    matchLabels:
+      app: marketsphere-app
+  template:
+    metadata:
+      labels:
+        app: marketsphere-app
+    spec:
+      volumes:
+        - name: rds-ca
+          configMap:
+            name: rds-ca
+      containers:
+        - name: marketsphere-app
+          image: 277140629583.dkr.ecr.us-east-1.amazonaws.com/marketsphere-app:eks-test
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3000"
+            - name: HOSTNAME
+              value: "0.0.0.0"
+            - name: NODE_EXTRA_CA_CERTS
+              value: "/etc/ssl/certs/rds-global-bundle.pem"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: marketsphere-db
+                  key: DATABASE_URL
+            - name: REDIS_URL
+              value: "redis://marketsphere-redis:6379"
+          volumeMounts:
+            - name: rds-ca
+              mountPath: /etc/ssl/certs/rds-global-bundle.pem
+              subPath: rds-global-bundle.pem
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
