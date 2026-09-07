@@ -1,0 +1,12 @@
+node_modules
+.next
+terraform/.terraform
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/.terraform.lock.hcl
+ai-knowledge-assistant/.venv
+ai-knowledge-assistant/__pycache__
+ai-knowledge-assistant/.pytest_cache
+.git
+.env*
+cookies.txt
