@@ -1,6 +1,7 @@
 import {
   NotFoundError,
   BadRequestError,
+  ApiError,
 } from "@/lib/api/errors";
 
 import {
@@ -18,6 +19,7 @@ import { projectRepository } from "@/repositories/projectRepository";
 
 import { deploymentJobService } from "@/services/deployment/deploymentJobService";
 import { auditService } from "@/services/audit/auditService";
+import { workerHeartbeatService } from "@/services/worker/workerHeartbeatService";
 
 export const deploymentService = {
   async getEnvironmentDeployments(
@@ -88,6 +90,15 @@ export const deploymentService = {
     input: CreateDeploymentInput,
     ownerId: string
   ) {
+    const heartbeat = await workerHeartbeatService.getHeartbeat();
+    const workerOnline =
+      heartbeat &&
+      Date.now() - heartbeat.lastSeen.getTime() < 30_000;
+
+    if (!workerOnline) {
+      throw new ApiError("Deployment worker is offline", 503);
+    }
+
     const deployment =
       await this.createDeployment(
         input,
