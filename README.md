@@ -1,85 +1,168 @@
-# MarketSphere — Cloud-Native E-Commerce Platform
+# MarketSphere — Cloud-Native DevOps Control Plane
 
-MarketSphere is a cloud-native e-commerce platform built to demonstrate modern **DevOps, Kubernetes, AWS, Terraform, Docker, PostgreSQL, Redis, and AI/RAG** engineering practices.
+MarketSphere is a cloud-native platform designed to demonstrate modern **DevOps, cloud infrastructure, containerization, Kubernetes, CI/CD, database, caching, and AI/RAG engineering practices**.
 
-The project covers the complete application-to-cloud workflow:
+The project provides an end-to-end workflow for managing projects, pipelines, deployments, environments, background deployment jobs, and operational state through a Next.js-based DevOps control plane.
 
-```text
-Application
-    ↓
-Docker
-    ↓
-Amazon ECR
-    ↓
-Terraform
-    ↓
-AWS VPC
-    ↓
-Amazon EKS
-    ↓
-Kubernetes
-    ↓
-Application + Worker + Redis
-    ↓
-PostgreSQL / Neon
-```
-
-An accompanying **AI Knowledge Assistant** demonstrates a Retrieval-Augmented Generation (RAG) service using Python.
+A companion **AI Knowledge Assistant** demonstrates a Python-based Retrieval-Augmented Generation (RAG) architecture using FAISS and AWS Bedrock.
 
 ---
 
-## Architecture
+## Table of Contents
+
+* [Overview](#overview)
+* [Architecture](#architecture)
+* [Technology Stack](#technology-stack)
+* [Core Components](#core-components)
+* [Project Structure](#project-structure)
+* [Application](#application)
+* [Authentication and Authorization](#authentication-and-authorization)
+* [Database](#database)
+* [Redis](#redis)
+* [Deployment Worker](#deployment-worker)
+* [Pipelines](#pipelines)
+* [Deployment Jobs](#deployment-jobs)
+* [Docker](#docker)
+* [Amazon ECR](#amazon-ecr)
+* [Kubernetes](#kubernetes)
+* [Terraform](#terraform)
+* [AWS Infrastructure](#aws-infrastructure)
+* [AI Knowledge Assistant](#ai-knowledge-assistant)
+* [Local Development](#local-development)
+* [Testing and Validation](#testing-and-validation)
+* [Production Validation](#production-validation)
+* [Current Infrastructure State](#current-infrastructure-state)
+* [Security](#security)
+* [Troubleshooting](#troubleshooting)
+* [DevOps Skills Demonstrated](#devops-skills-demonstrated)
+* [Project Status](#project-status)
+* [Future Enhancements](#future-enhancements)
+* [Portfolio Summary](#portfolio-summary)
+
+---
+
+# Overview
+
+MarketSphere demonstrates how a modern application can be developed, containerized, validated, and deployed using cloud-native DevOps practices.
+
+The primary application uses:
+
+* Next.js
+* TypeScript
+* Prisma
+* PostgreSQL
+* Redis
+* Docker
+* Kubernetes
+* Terraform
+* AWS
+
+The platform includes functionality for:
+
+* Project management
+* Environment management
+* Pipeline management
+* Deployment management
+* Background deployment jobs
+* Worker processing
+* Authentication
+* Role-based authorization
+* Audit logging
+* Operational health checks
+* Queue/deployment metrics
+
+The project was also deployed and runtime-tested on Amazon EKS during development. After successful validation, the AWS runtime infrastructure was reduced/removed to control costs.
+
+---
+
+# Architecture
+
+## Application Architecture
 
 ```text
                          Developer
-                             │
-                             ▼
-                         Git / GitHub
-                             │
-             ┌───────────────┴────────────────┐
-             │                                │
-             ▼                                ▼
-       Next.js Application              AI Knowledge Assistant
-             │                                │
-             ▼                                ▼
-           Docker                         Python / FastAPI
-             │                                │
-             ▼                                ▼
-       Amazon ECR                         RAG Pipeline
-             │
-             ▼
-        Amazon EKS
-             │
-     ┌───────┼────────┐
-     │       │        │
-     ▼       ▼        ▼
-   App     Worker    Redis
-     │       │
-     └───────┤
-             ▼
-      PostgreSQL / Neon
+                            |
+                            v
+                       Git / GitHub
+                            |
+                            v
+                    MarketSphere Platform
+                            |
+              +-------------+-------------+
+              |                           |
+              v                           v
+        Next.js Web App             Background Worker
+              |                           |
+              |                           |
+              +-------------+-------------+
+                            |
+                +-----------+-----------+
+                |                       |
+                v                       v
+           PostgreSQL                Redis
+                |
+                v
+        Application Data
 ```
 
 ---
 
-## Technology Stack
+## Cloud Deployment Architecture
 
-### Application
+The AWS deployment architecture used during runtime validation was:
+
+```text
+                    Developer
+                        |
+                        v
+                   Git / GitHub
+                        |
+                        v
+                 Docker Images
+                        |
+                        v
+                   Amazon ECR
+                        |
+                        v
+                 Amazon EKS
+                        |
+             +----------+----------+
+             |          |          |
+             v          v          v
+          App        Worker      Redis
+             |          |
+             +----------+
+                  |
+                  v
+             PostgreSQL
+```
+
+The EKS environment was successfully used for runtime validation and Kubernetes connectivity testing.
+
+The AWS runtime environment was subsequently reduced/removed as part of cost control.
+
+---
+
+# Technology Stack
+
+## Application
 
 * Next.js 16
 * TypeScript
 * Prisma ORM
-* PostgreSQL
+* PostgreSQL 16
 * Redis
 * NextAuth
+* Node.js
 
-### Containerization
+## Containerization
 
 * Docker
 * Docker Compose
 * Multi-stage Docker builds
+* Separate application and worker images
 
-### AWS
+## AWS
 
 * Amazon EKS
 * Amazon ECR
@@ -87,169 +170,368 @@ An accompanying **AI Knowledge Assistant** demonstrates a Retrieval-Augmented Ge
 * IAM
 * EC2-backed EKS Managed Node Groups
 
-### Infrastructure as Code
+## Infrastructure as Code
 
 * Terraform
 * Terraform AWS VPC module
 * Terraform AWS EKS module
 
-### Kubernetes
+## Kubernetes
 
-* Deployments
+* Kubernetes Deployments
 * Services
-* ConfigMaps / Secrets
+* ConfigMaps
+* Secrets
 * ServiceAccounts
 * RBAC
-* Horizontal Pod Autoscaler configuration
-* Ingress configuration
 * Kustomize
+* HPA configuration
+* Ingress configuration
 
-### AI
+## AI / GenAI
 
 * Python
 * FastAPI
-* RAG architecture
+* RAG
 * FAISS
-* AWS Bedrock integration
+* AWS Bedrock
 * Pytest
 
-### Reverse Proxy
+## Reverse Proxy
 
 * Nginx
 
 ---
 
+# Core Components
+
+MarketSphere consists of several major application components:
+
+```text
+MarketSphere
+|
++-- Web Application
+|
++-- REST API
+|
++-- Authentication
+|
++-- Project Management
+|
++-- Environment Management
+|
++-- Pipeline Management
+|
++-- Deployment Management
+|
++-- Deployment Job Processing
+|
++-- Background Worker
+|
++-- PostgreSQL
+|
++-- Redis
+|
++-- Kubernetes Infrastructure
+|
++-- Terraform Infrastructure
+|
++-- AI Knowledge Assistant
+```
+
+---
+
 # Project Structure
+
+The repository is organized approximately as follows:
 
 ```text
 marketsphere/
-│
-├── app/                         # Next.js application
-├── prisma/                      # Prisma schema and migrations
-├── public/                      # Static assets
-├── scripts/                     # Operational scripts
-├── worker/                      # Worker entry point
-│
-├── k8s/
-│   ├── base/                    # Base Kubernetes manifests
-│   └── overlays/
-│       ├── local/               # Local configuration
-│       └── aws/                 # AWS/EKS configuration
-│
-├── terraform/
-│   ├── main.tf                  # VPC infrastructure
-│   ├── eks.tf                   # EKS infrastructure
-│   ├── provider.tf              # AWS provider
-│   ├── variables.tf             # Terraform variables
-│   ├── outputs.tf               # Terraform outputs
-│   ├── versions.tf              # Terraform version
-│   └── .terraform.lock.hcl     # Provider dependency lock file
-│
-├── ai-knowledge-assistant/
-│   ├── app/                     # FastAPI/RAG application
-│   ├── documents/               # Knowledge documents
-│   ├── tests/                   # Python tests
-│   ├── Dockerfile
-│   └── requirements.txt
-│
-├── Dockerfile
-├── Dockerfile.app
-├── Dockerfile.worker
-├── docker-compose.yml
-├── nginx/
-├── package.json
-└── README.md
+|
++-- src/
+|   |
+|   +-- app/
+|   |   |
+|   |   +-- api/
+|   |   +-- dashboard/
+|   |   +-- projects/
+|   |   +-- login/
+|   |   +-- ...
+|   |
+|   +-- components/
+|   +-- services/
+|   |   |
+|   |   +-- pipeline/
+|   |   +-- metrics/
+|   |   +-- deployment/
+|   |   +-- ...
+|   |
+|   +-- lib/
+|   +-- types/
+|
++-- prisma/
+|   +-- schema.prisma
+|   +-- migrations/
+|
++-- public/
+|
++-- scripts/
+|
++-- worker/
+|
++-- k8s/
+|   |
+|   +-- base/
+|   |
+|   +-- overlays/
+|       |
+|       +-- local/
+|       +-- aws/
+|
++-- terraform/
+|   |
+|   +-- main.tf
+|   +-- eks.tf
+|   +-- provider.tf
+|   +-- variables.tf
+|   +-- outputs.tf
+|   +-- versions.tf
+|   +-- ...
+|
++-- ai-knowledge-assistant/
+|   |
+|   +-- app/
+|   +-- documents/
+|   +-- tests/
+|   +-- Dockerfile
+|   +-- requirements.txt
+|
++-- nginx/
+|
++-- Dockerfile
++-- Dockerfile.app
++-- Dockerfile.worker
++-- docker-compose.yml
++-- package.json
++-- README.md
 ```
 
 ---
 
-# Application Components
+# Application
 
-## 1. Next.js Application
+The main MarketSphere application is built using **Next.js and TypeScript**.
 
-The main MarketSphere application is built with Next.js and TypeScript.
+The application provides:
 
-It provides:
-
-* Web application UI
+* Web UI
 * Authentication
 * API routes
-* Deployment management
 * Project management
-* Database integration
+* Environment management
+* Pipeline management
+* Deployment management
+* Deployment job tracking
 * Worker integration
+* Database integration
+* Operational health endpoints
 
-Production build:
+The production application is deployed through Vercel.
+
+The production deployment was validated with:
 
 ```bash
-npm run build
+curl -s -o /dev/null -w "%{http_code}\n" <production-endpoint>
 ```
+
+The application returned HTTP 200 for the public application endpoints.
 
 ---
 
-## 2. PostgreSQL
+# Authentication and Authorization
 
-PostgreSQL is used as the primary relational database.
+MarketSphere implements authenticated access to protected application resources.
 
-Prisma manages:
+Authentication is handled through **NextAuth**.
 
-* Database schema
-* Migrations
+Protected resources include APIs such as:
+
+```text
+/api/projects
+/api/pipelines
+/api/dashboard/overview
+```
+
+Unauthenticated requests are rejected with:
+
+```text
+HTTP 401 Unauthorized
+```
+
+Protected dashboard routes redirect unauthenticated users to the login page.
+
+The platform also includes role/permission checks for protected operations such as pipeline creation and deployment-related actions.
+
+---
+
+# Database
+
+PostgreSQL is the primary relational database.
+
+Prisma is used for:
+
+* Schema management
 * Database access
+* Migrations
+* Type-safe queries
 
-Migration validation:
+Check migration status:
 
 ```bash
 npx prisma migrate status
 ```
 
-The project currently contains:
+The database schema was validated as up to date during project testing.
+
+The project contains multiple Prisma migrations covering the application's evolving data model.
+
+Important entities include concepts such as:
 
 ```text
-15 migrations
+User
+Project
+Environment
+Pipeline
+Deployment
+DeploymentJob
+AuditLog
 ```
 
-and the database schema was validated as up to date.
+The exact schema should always be treated as the source of truth in:
+
+```text
+prisma/schema.prisma
+```
 
 ---
 
-## 3. Redis
+# Redis
 
-Redis provides an in-memory data store used by the application and worker components.
+Redis provides in-memory data storage for application and background-worker functionality.
 
-Kubernetes service:
+The Kubernetes service used during EKS validation was:
 
 ```text
 marketsphere-redis
 ```
 
-Port:
+Default Redis port:
 
 ```text
 6379
 ```
 
+Redis was successfully deployed and validated as part of the Kubernetes runtime environment.
+
 ---
 
-## 4. Deployment Worker
+# Deployment Worker
 
-MarketSphere includes a dedicated worker responsible for background deployment-related processing.
+MarketSphere includes a dedicated background worker for deployment-related processing.
 
-The worker:
+The worker runs independently from the web application.
 
-* Runs independently from the web application
-* Uses PostgreSQL
-* Uses Redis
-* Maintains worker heartbeat information
-* Supports deployment job processing
+Responsibilities include:
 
-The worker was successfully started and validated on EKS.
+* Processing deployment jobs
+* Maintaining worker state/heartbeat information
+* Communicating with PostgreSQL
+* Communicating with Redis
+* Processing background tasks
+* Handling deployment job states
+
+The deployment worker was successfully executed and validated during the EKS runtime testing phase.
+
+The project also includes logic to prevent deployment operations when the worker is offline.
+
+---
+
+# Pipelines
+
+MarketSphere includes pipeline management functionality.
+
+The backend provides authenticated pipeline APIs for:
+
+* Listing pipelines
+* Retrieving pipeline information
+* Creating pipelines
+* Validating project access
+* Applying role-based permissions
+* Recording audit information
+
+Pipeline information includes fields such as:
+
+```text
+Name
+Provider
+Repository
+Project
+Branch
+Build Command
+Deploy Command
+```
+
+Project-level pipeline functionality is implemented through the project management interface.
+
+The top-level dashboard Pipelines page is currently a lightweight placeholder and should not be considered a fully featured standalone pipeline management console.
+
+---
+
+# Deployment Jobs
+
+Deployment processing is represented using deployment job states.
+
+The job lifecycle includes states such as:
+
+```text
+PENDING
+    |
+    v
+RUNNING
+    |
+    +---------> FAILED
+    |
+    +---------> COMPLETED
+
+Cancellation flow:
+
+RUNNING
+    |
+    v
+CANCEL_REQUESTED
+    |
+    v
+CANCELLED
+```
+
+This allows the platform to track the lifecycle of background deployment operations.
+
+Queue metrics are also available through the application service layer.
+
+Tracked states include:
+
+```text
+Pending
+Running
+Completed
+Failed
+```
 
 ---
 
 # Docker
 
-MarketSphere uses separate Docker images for the application and worker.
+MarketSphere uses separate Docker images for the web application and worker.
 
 ```text
 Dockerfile.app
@@ -260,13 +542,13 @@ The architecture separates:
 
 ```text
 Web Application
-       │
-       ▼
+       |
+       v
 marketsphere-app
 
 Background Processing
-       │
-       ▼
+       |
+       v
 marketsphere-worker
 ```
 
@@ -286,401 +568,19 @@ Validate the Compose configuration:
 docker compose config --quiet
 ```
 
----
-
-# Amazon ECR
-
-Container images are stored in Amazon Elastic Container Registry.
-
-Repositories:
-
-```text
-marketsphere-app
-marketsphere-worker
-```
-
-The EKS workloads were successfully configured to pull the images from ECR.
-
-Example image format:
-
-```text
-<account>.dkr.ecr.<region>.amazonaws.com/marketsphere-app:<tag>
-```
-
----
-
-# Terraform Infrastructure
-
-Terraform provisions the AWS infrastructure required by MarketSphere.
-
-The configuration uses:
-
-```text
-Terraform
-    │
-    ├── VPC module
-    │
-    └── EKS module
-```
-
-### VPC
-
-CIDR:
-
-```text
-10.20.0.0/16
-```
-
-The VPC configuration includes:
-
-* Public subnets
-* Private subnets
-* DNS hostnames
-* DNS support
-* Kubernetes subnet tagging
-
-### EKS
-
-The EKS configuration uses:
-
-```text
-Kubernetes 1.33
-```
-
-and an EKS managed node group using:
-
-```text
-t3.small
-```
-
-Terraform validation:
-
-```bash
-terraform fmt -check -recursive
-terraform validate
-```
-
-Both validations passed successfully.
-
-> **Cost-control note:** The Terraform configuration describes the intended infrastructure architecture. The live AWS environment was intentionally scaled down after validation to avoid unnecessary AWS charges.
-
----
-
-# Kubernetes
-
-The application is deployed to Kubernetes using Kustomize.
-
-Main namespace:
-
-```text
-marketsphere
-```
-
-Workloads:
-
-```text
-marketsphere-app
-marketsphere-worker
-marketsphere-redis
-```
-
-Services:
-
-```text
-marketsphere-app
-marketsphere-redis
-```
-
-The AWS overlay can be rendered using:
-
-```bash
-kubectl kustomize k8s/overlays/aws
-```
-
-The Kubernetes manifests were successfully rendered and validated.
-
----
-
-# Kubernetes Runtime Validation
-
-During EKS testing, the following components successfully ran:
-
-```text
-marketsphere-app       Running
-marketsphere-worker    Running
-marketsphere-redis     Running
-```
-
-Internal service connectivity was verified with:
-
-```bash
-kubectl run marketsphere-test \
-  -n marketsphere \
-  --rm -it \
-  --restart=Never \
-  --image=curlimages/curl \
-  -- curl -sS -I http://marketsphere-app
-```
-
-The application returned:
-
-```text
-HTTP/1.1 200 OK
-```
-
-This verified Kubernetes service discovery and application connectivity inside the cluster.
-
----
-
-# AI Knowledge Assistant
-
-The project also contains an independent Python-based AI Knowledge Assistant.
-
-Architecture:
-
-```text
-User Query
-    ↓
-FastAPI
-    ↓
-Document Retrieval
-    ↓
-FAISS
-    ↓
-Relevant Context
-    ↓
-LLM / AWS Bedrock
-    ↓
-Generated Response
-```
-
-Technology:
-
-* Python
-* FastAPI
-* FAISS
-* AWS Bedrock
-* Pytest
-
-Run tests:
-
-```bash
-cd ai-knowledge-assistant
-
-source .venv/bin/activate
-
-pytest -q
-```
-
-Validation result:
-
-```text
-28 passed
-```
-
----
-
-# Testing and Validation
-
-The project was validated across multiple layers.
-
-### Python
-
-```bash
-pytest -q
-```
-
-Result:
-
-```text
-28 passed
-```
-
-### TypeScript
-
-```bash
-npm run typecheck
-```
-
-Result:
-
-```text
-Passed
-```
-
-### Production Build
-
-```bash
-npm run build
-```
-
-Result:
-
-```text
-Compiled successfully
-Finished TypeScript
-Generating static pages
-Finalizing page optimization
-```
-
-### Prisma
-
-```bash
-npx prisma migrate status
-```
-
-Result:
-
-```text
-15 migrations found
-Database schema is up to date
-```
-
-### Docker Compose
-
-```bash
-docker compose config --quiet
-```
-
-Result:
-
-```text
-Valid configuration
-```
-
-### Kubernetes
-
-```bash
-kubectl kustomize k8s/overlays/aws
-```
-
-Result:
-
-```text
-Successful rendering
-```
-
-### Terraform
-
-```bash
-terraform fmt -check -recursive
-terraform validate
-```
-
-Result:
-
-```text
-Configuration is valid
-```
-
-### Git
-
-The repository is maintained on GitHub with a clean working tree and synchronized `main` branch.
-
----
-
-# Deployment Flow
-
-The intended deployment workflow is:
-
-```text
-1. Develop application
-       ↓
-2. Run tests
-       ↓
-3. Build Next.js application
-       ↓
-4. Build Docker images
-       ↓
-5. Push images to Amazon ECR
-       ↓
-6. Provision AWS infrastructure with Terraform
-       ↓
-7. Configure EKS
-       ↓
-8. Deploy Kubernetes manifests
-       ↓
-9. Kubernetes schedules:
-       ├── Application
-       ├── Worker
-       └── Redis
-       ↓
-10. Application connects to PostgreSQL
-       ↓
-11. Validate application health
-```
-
----
-
-# Local Development
-
-## Prerequisites
-
-Install:
-
-* Node.js
-* npm
-* Docker
-* Docker Compose
-* PostgreSQL client/tools if required
-* Terraform
-* AWS CLI
-* kubectl
-* Python 3.14
-
----
-
-## Install dependencies
-
-```bash
-npm install
-```
-
----
-
-## Configure environment
-
-Copy the example environment file:
-
-```bash
-cp .env.example .env
-```
-
-Configure the required environment variables according to the deployment environment.
-
-Do not commit `.env` files or credentials to Git.
-
----
-
-## Run locally
-
-```bash
-npm run dev
-```
-
-Application:
-
-```text
-http://localhost:3000
-```
-
----
-
-# Docker Compose
-
-Start the local service stack:
+Start the local stack:
 
 ```bash
 docker compose up -d
 ```
 
-Check services:
+Check running services:
 
 ```bash
 docker compose ps
 ```
 
-Stop services:
+Stop the stack:
 
 ```bash
 docker compose down
@@ -688,15 +588,80 @@ docker compose down
 
 ---
 
-# Kubernetes Deployment
+# Amazon ECR
 
-Render the AWS manifests:
+During the AWS deployment phase, container images were stored in Amazon Elastic Container Registry.
+
+The intended repositories are:
+
+```text
+marketsphere-app
+marketsphere-worker
+```
+
+Typical ECR image format:
+
+```text
+<account-id>.dkr.ecr.<region>.amazonaws.com/marketsphere-app:<tag>
+```
+
+The EKS workloads successfully pulled the required images from ECR during runtime validation.
+
+---
+
+# Kubernetes
+
+MarketSphere contains Kubernetes manifests organized using Kustomize.
+
+Primary namespace:
+
+```text
+marketsphere
+```
+
+Main workloads:
+
+```text
+marketsphere-app
+marketsphere-worker
+marketsphere-redis
+```
+
+Main services:
+
+```text
+marketsphere-app
+marketsphere-redis
+```
+
+The manifests include Kubernetes resources for:
+
+* Deployments
+* Services
+* ConfigMaps
+* Secrets
+* ServiceAccounts
+* RBAC
+* HPA configuration
+* Ingress configuration
+
+---
+
+## Render Kubernetes Manifests
+
+Render the AWS overlay:
 
 ```bash
 kubectl kustomize k8s/overlays/aws
 ```
 
-Apply them to a configured cluster:
+This validates that the Kustomize configuration can be rendered successfully.
+
+---
+
+## Apply Kubernetes Manifests
+
+Only apply the manifests when a valid Kubernetes cluster is intentionally available:
 
 ```bash
 kubectl apply -k k8s/overlays/aws
@@ -714,83 +679,631 @@ Check services:
 kubectl get svc -n marketsphere
 ```
 
----
-
-# AWS / EKS Operations
-
-Check the cluster:
+Check deployments:
 
 ```bash
-aws eks describe-cluster \
-  --name marketsphere-dev-eks \
-  --region us-east-1
-```
-
-Configure kubectl:
-
-```bash
-aws eks update-kubeconfig \
-  --region us-east-1 \
-  --name marketsphere-dev-eks
-```
-
-Check nodes:
-
-```bash
-kubectl get nodes
-```
-
-Check MarketSphere workloads:
-
-```bash
-kubectl get pods -n marketsphere
+kubectl get deployments -n marketsphere
 ```
 
 ---
 
-# Cost-Controlled AWS State
+# Kubernetes Runtime Validation
 
-After completing the EKS runtime validation, the environment was intentionally reduced to minimize AWS costs.
-
-Current cost-control approach:
+During the AWS/EKS validation phase, the following workloads successfully reached a running state:
 
 ```text
-EKS control plane
-       │
-       ├── Cluster retained
-       │
-       └── Worker node capacity
-               ↓
-              0
+marketsphere-app
+marketsphere-worker
+marketsphere-redis
 ```
 
-MarketSphere deployments were scaled to zero after validation:
+Internal Kubernetes service connectivity was also tested.
+
+Example:
+
+```bash
+kubectl run marketsphere-test \
+  -n marketsphere \
+  --rm -it \
+  --restart=Never \
+  --image=curlimages/curl \
+  -- curl -sS -I http://marketsphere-app
+```
+
+The application returned:
 
 ```text
-marketsphere-app       0 replicas
-marketsphere-worker    0 replicas
-marketsphere-redis     0 replicas
+HTTP/1.1 200 OK
 ```
 
-The NAT Gateway was also removed.
+This validated:
 
-This means the project is **not currently serving the application from EKS**. The EKS environment was validated first and then intentionally placed into a cost-controlled state.
+* Kubernetes scheduling
+* Pod startup
+* Service discovery
+* Internal networking
+* Application availability inside the cluster
 
-> Do not run `terraform apply` against the current AWS environment without reviewing the plan first. The committed Terraform configuration describes infrastructure including a NAT Gateway and a one-node EKS managed node group, while the live environment was intentionally scaled down for cost control.
+These results describe the **historical EKS runtime validation phase**, not the current live AWS state.
+
+---
+
+# Terraform
+
+Terraform is used to define the AWS infrastructure architecture.
+
+The Terraform configuration uses:
+
+```text
+Terraform
+    |
+    +-- VPC
+    |
+    +-- EKS
+    |
+    +-- Managed Node Group
+```
+
+Terraform modules include:
+
+```text
+terraform-aws-modules/vpc/aws
+terraform-aws-modules/eks/aws
+```
+
+The configured Kubernetes version during EKS implementation was:
+
+```text
+1.33
+```
+
+The configured EKS managed node group used:
+
+```text
+t3.small
+```
+
+---
+
+## Terraform Validation
+
+Format Terraform files:
+
+```bash
+terraform fmt -check -recursive
+```
+
+Validate configuration:
+
+```bash
+terraform validate
+```
+
+Initialize providers and modules:
+
+```bash
+terraform init
+```
+
+Review infrastructure changes:
+
+```bash
+terraform plan
+```
+
+Apply infrastructure only after carefully reviewing the plan:
+
+```bash
+terraform apply
+```
+
+> **Important:** Do not run `terraform apply` merely to reproduce the historical EKS environment. Review the current Terraform state and plan first, particularly because AWS cost control is an explicit project requirement.
+
+---
+
+# AWS Infrastructure
+
+The AWS architecture used during development included:
+
+## VPC
+
+Configured VPC CIDR:
+
+```text
+10.20.0.0/16
+```
+
+The VPC configuration included:
+
+* Subnets
+* Internet Gateway
+* DNS support
+* DNS hostnames
+* Kubernetes subnet tagging
+
+The VPC was successfully provisioned and validated.
+
+---
+
+## EKS
+
+The project previously deployed:
+
+```text
+marketsphere-dev-eks
+```
+
+in:
+
+```text
+us-east-1
+```
+
+The EKS environment was used to validate:
+
+* Managed node groups
+* Kubernetes scheduling
+* ECR image pulling
+* Application deployment
+* Worker execution
+* Redis
+* Kubernetes services
+* Internal networking
+
+The cluster and workloads were subsequently removed/reduced as part of AWS cost control.
+
+---
+
+# Current AWS Infrastructure State
+
+The current AWS state must be distinguished from the historical EKS validation environment.
+
+The latest verification of the EKS cluster returned:
+
+```text
+ResourceNotFoundException
+No cluster found for name: marketsphere-dev-eks
+```
+
+Therefore:
+
+```text
+EKS Cluster                 Not currently present
+EKS Worker Nodes            Not currently running
+MarketSphere EKS Pods       Not currently running
+EKS Runtime                 Previously validated
+```
+
+The later Terraform state contained VPC-related resources, including:
+
+```text
+VPC
+Internet Gateway
+Public Subnets
+```
+
+The project should therefore **not** describe the current environment as an active EKS deployment.
+
+This distinction is important for both technical accuracy and AWS cost management.
+
+---
+
+# AI Knowledge Assistant
+
+The repository also contains a companion Python-based AI Knowledge Assistant.
+
+It demonstrates a Retrieval-Augmented Generation architecture.
+
+Architecture:
+
+```text
+User Query
+     |
+     v
+FastAPI
+     |
+     v
+Document Retrieval
+     |
+     v
+FAISS
+     |
+     v
+Relevant Context
+     |
+     v
+LLM / AWS Bedrock
+     |
+     v
+Generated Response
+```
+
+Technology:
+
+* Python
+* FastAPI
+* FAISS
+* AWS Bedrock
+* Pytest
+
+Run the tests:
+
+```bash
+cd ai-knowledge-assistant
+
+source .venv/bin/activate
+
+pytest -q
+```
+
+Validation result:
+
+```text
+28 passed
+```
+
+The AI Knowledge Assistant is documented as a companion component and is separate from the main MarketSphere web application's production runtime.
+
+---
+
+# Local Development
+
+## Prerequisites
+
+Install the following tools as required by the component being worked on:
+
+* Node.js
+* npm
+* Docker
+* Docker Compose
+* Python
+* Terraform
+* AWS CLI
+* kubectl
+
+---
+
+## Install Application Dependencies
+
+```bash
+npm install
+```
+
+---
+
+## Environment Configuration
+
+Create the local environment file:
+
+```bash
+cp .env.example .env
+```
+
+Configure the required variables for the local environment.
+
+Typical configuration areas include:
+
+```text
+DATABASE_URL
+NEXTAUTH_SECRET
+NEXTAUTH_URL
+ADMIN_USER
+ADMIN_PASS
+NEXT_PUBLIC_*
+```
+
+The exact required variables should be taken from:
+
+```text
+.env.example
+```
+
+Never commit real credentials or secrets.
+
+---
+
+## Run the Application
+
+```bash
+npm run dev
+```
+
+The development server normally runs on:
+
+```text
+http://localhost:3000
+```
+
+---
+
+# Prisma Commands
+
+Generate the Prisma client:
+
+```bash
+npx prisma generate
+```
+
+Check migration status:
+
+```bash
+npx prisma migrate status
+```
+
+Create a development migration when schema changes are intentionally made:
+
+```bash
+npx prisma migrate dev
+```
+
+> Do not create migrations or modify the database schema unless a schema change is intentionally required.
+
+---
+
+# Production Validation
+
+The production application was validated using HTTP smoke tests.
+
+Example:
+
+```bash
+curl -I <production-endpoint>
+```
+
+Expected:
+
+```text
+HTTP 200
+```
+
+Health endpoint:
+
+```bash
+curl -i <production-endpoint>/api/health
+```
+
+Expected response:
+
+```json
+{
+  "status": "ok",
+  "service": "marketsphere-app"
+}
+```
+
+Protected APIs should reject unauthenticated requests.
+
+Example:
+
+```bash
+curl -i <production-endpoint>/api/projects
+```
+
+Expected:
+
+```text
+HTTP 401
+```
+
+Similarly:
+
+```bash
+curl -i <production-endpoint>/api/pipelines
+```
+
+Expected:
+
+```text
+HTTP 401
+```
+
+Dashboard routes should redirect unauthenticated users to the login page.
+
+---
+
+# Testing and Validation
+
+MarketSphere was validated at multiple layers.
+
+## Application Linting
+
+```bash
+npm run lint
+```
+
+Result:
+
+```text
+Passed
+```
+
+---
+
+## TypeScript
+
+```bash
+npm run typecheck
+```
+
+Result:
+
+```text
+Passed
+```
+
+---
+
+## Production Build
+
+```bash
+npm run build
+```
+
+The production build completed successfully, including:
+
+```text
+Compilation
+TypeScript validation
+Static page generation
+Page optimization
+```
+
+---
+
+## Prisma
+
+```bash
+npx prisma migrate status
+```
+
+The database migration state was validated as up to date during project testing.
+
+---
+
+## Docker Compose
+
+```bash
+docker compose config --quiet
+```
+
+Result:
+
+```text
+Valid configuration
+```
+
+---
+
+## Kubernetes
+
+```bash
+kubectl kustomize k8s/overlays/aws
+```
+
+Result:
+
+```text
+Successful rendering
+```
+
+---
+
+## Terraform
+
+```bash
+terraform fmt -check -recursive
+terraform validate
+```
+
+Result:
+
+```text
+Configuration is valid
+```
+
+---
+
+## AI Knowledge Assistant
+
+```bash
+cd ai-knowledge-assistant
+source .venv/bin/activate
+pytest -q
+```
+
+Result:
+
+```text
+28 passed
+```
+
+---
+
+## Git
+
+The repository was validated with a clean working tree and synchronized `main` branch during the final project validation.
+
+---
+
+# Monitoring and Observability
+
+The application contains operational metrics functionality, including deployment-job queue metrics.
+
+The service layer tracks values such as:
+
+```text
+Pending
+Running
+Completed
+Failed
+```
+
+However, the current dashboard monitoring page is intentionally lightweight and is not a complete Prometheus/Grafana observability platform.
+
+The project does **not** currently claim a full production Prometheus/Grafana implementation.
+
+Potential future observability components include:
+
+```text
+Prometheus
+Grafana
+Loki
+Metrics Server
+CloudWatch
+```
+
+---
+
+# Dashboard Scope
+
+The current dashboard contains the core application areas required for the platform.
+
+## Implemented / Functional
+
+* Authentication
+* Dashboard routing
+* Project management
+* Project details
+* Environment management
+* Deployment history
+* Pipeline management at project level
+* Deployment forms
+* Deployment job processing
+* API authentication
+* Health checks
+* Queue metrics service
+
+## Lightweight / Placeholder Areas
+
+The following top-level dashboard pages are currently placeholders:
+
+```text
+Pipelines
+Monitoring
+Settings
+```
+
+They should not be represented as fully implemented enterprise-grade consoles.
+
+The underlying backend capabilities should be treated separately from the current dashboard presentation layer.
 
 ---
 
 # Security Practices
 
-The project follows several basic security practices:
+The project follows basic security practices including:
 
-* Secrets are supplied through environment variables/Kubernetes Secrets.
-* `.env` files are excluded from Git.
-* AWS credentials are not stored in source code.
-* Container images are stored in ECR.
-* Kubernetes worker access uses IAM permissions.
-* Kubernetes workloads use dedicated service accounts where required.
-* Terraform state and local Terraform directories are excluded from Git.
+* Environment-based secret configuration
+* Authentication for protected APIs
+* Role-based authorization
+* Project access validation
+* Audit logging
+* Kubernetes Secrets where required
+* Dedicated service accounts where required
+* IAM-based AWS access
+* No hard-coded AWS credentials
+* Git exclusion of local secrets
+* Terraform state protection
 
 Never commit:
 
@@ -798,20 +1311,133 @@ Never commit:
 .env
 AWS access keys
 AWS secret keys
-database passwords
+Database passwords
 API keys
-private keys
+Private keys
 Kubernetes secret values
-Terraform state containing sensitive data
+Sensitive Terraform state
 ```
+
+---
+
+# Troubleshooting
+
+The project involved troubleshooting several real-world DevOps issues.
+
+## Docker
+
+Investigated:
+
+* Container startup failures
+* Service dependencies
+* Docker networking
+* Port conflicts
+* Multi-container communication
+
+Useful commands:
+
+```bash
+docker compose ps
+docker compose logs
+docker compose config
+```
+
+---
+
+## PostgreSQL
+
+Investigated:
+
+* Database connectivity
+* Prisma connection errors
+* Environment configuration
+* IPv4/IPv6 connectivity issues
+
+Useful command:
+
+```bash
+npx prisma migrate status
+```
+
+---
+
+## Kubernetes
+
+Investigated:
+
+* Pod scheduling
+* Pod startup
+* Service discovery
+* Container image pulling
+* ECR authentication
+* Worker execution
+* Redis connectivity
+* HPA metrics availability
+* Deployment behavior
+
+Useful commands:
+
+```bash
+kubectl get pods -A
+kubectl get nodes
+kubectl describe pod <pod-name> -n marketsphere
+kubectl logs <pod-name> -n marketsphere
+kubectl get events -n marketsphere
+```
+
+---
+
+## Terraform
+
+Investigated:
+
+* Provider initialization
+* Module dependencies
+* Terraform state
+* EKS configuration
+* VPC configuration
+* Infrastructure validation
+* AWS resource lifecycle
+
+Useful commands:
+
+```bash
+terraform init
+terraform fmt -check -recursive
+terraform validate
+terraform plan
+terraform state list
+```
+
+---
+
+## AWS Cost Management
+
+AWS infrastructure was deliberately reduced after successful runtime validation.
+
+Before performing any infrastructure change:
+
+```bash
+terraform plan
+```
+
+Review:
+
+* EKS resources
+* EC2 resources
+* NAT Gateway resources
+* Load Balancers
+* EBS volumes
+* Public IP addresses
+* Other billable resources
+
+Do not recreate infrastructure solely for demonstration purposes when it is not required.
 
 ---
 
 # DevOps Skills Demonstrated
 
-This project demonstrates practical experience with:
-
-### Cloud
+## Cloud
 
 * AWS
 * VPC
@@ -820,25 +1446,27 @@ This project demonstrates practical experience with:
 * IAM
 * EC2
 
-### Infrastructure as Code
+## Infrastructure as Code
 
 * Terraform
-* Modular infrastructure
-* Terraform validation
-* Infrastructure configuration management
+* Terraform modules
+* Infrastructure validation
+* Terraform state management
+* AWS resource lifecycle management
 
-### Containers
+## Containers
 
 * Docker
 * Multi-stage builds
 * Docker Compose
 * Amazon ECR
 
-### Kubernetes
+## Kubernetes
 
 * EKS
 * Deployments
 * Services
+* ConfigMaps
 * Secrets
 * RBAC
 * ServiceAccounts
@@ -846,7 +1474,7 @@ This project demonstrates practical experience with:
 * HPA configuration
 * Ingress configuration
 
-### Application Operations
+## Application Operations
 
 * Next.js
 * TypeScript
@@ -856,85 +1484,247 @@ This project demonstrates practical experience with:
 * Background workers
 * Nginx
 
-### AI / GenAI
+## CI/CD and Source Control
 
-* RAG
+* Git
+* GitHub
+* Deployment workflows
+* Vercel deployments
+* Container image workflows
+
+## AI / GenAI
+
+* Retrieval-Augmented Generation
 * FAISS
 * FastAPI
 * AWS Bedrock
 * Python
-* Automated testing
+* Pytest
 
-### Troubleshooting
+## Troubleshooting
 
-The project involved practical troubleshooting of:
+Practical troubleshooting covered:
 
 * Docker networking
 * PostgreSQL connectivity
-* DNS IPv4/IPv6 resolution
+* DNS resolution
+* IPv4/IPv6 connectivity
 * Prisma database connectivity
 * Kubernetes scheduling
 * EKS node groups
 * ECR image pulling
 * Kubernetes service connectivity
-* HPA metrics availability
-* Terraform state/configuration
-* AWS resource and cost management
+* HPA metrics
+* Terraform state
+* AWS infrastructure lifecycle
+* AWS cost control
 
 ---
 
 # Project Status
 
-## Core implementation
+## Core Application
 
 ```text
-Application                 ✅ Complete
-Database                    ✅ Validated
-Redis                       ✅ Validated
-Worker                      ✅ Validated
-Docker                      ✅ Validated
-Amazon ECR                  ✅ Validated
-Kubernetes                  ✅ Validated
-Amazon EKS                  ✅ Runtime validated
-Terraform                   ✅ Validated
-AI Knowledge Assistant     ✅ 28 tests passed
-Git repository              ✅ Clean and synchronized
-Documentation               ✅ Complete
+Next.js Application       ✅ Validated
+Authentication            ✅ Validated
+Project Management        ✅ Implemented
+Environment Management    ✅ Implemented
+Pipeline Backend          ✅ Implemented
+Deployment Management     ✅ Implemented
+Deployment Worker         ✅ Validated
+PostgreSQL                ✅ Validated
+Redis                     ✅ Validated
+Docker                    ✅ Validated
+Terraform                 ✅ Validated
+Kubernetes Manifests      ✅ Validated
+EKS Runtime               ✅ Historically Validated
+AI Knowledge Assistant    ✅ 28 Tests Passed
+Production Application    ✅ HTTP Smoke Tested
+Git Repository            ✅ Clean / Synchronized
 ```
 
-## Current runtime state
+## Current AWS Runtime
 
 ```text
-EKS Cluster                 🟢 Retained
-EKS Worker Nodes            ⏸️ Scaled to 0
-MarketSphere Pods           ⏸️ Scaled to 0
-NAT Gateway                 ❌ Deleted
-Public Application Endpoint ❌ Not currently active
+EKS Cluster               ❌ Not currently present
+EKS Worker Nodes          ❌ Not currently running
+MarketSphere EKS Pods     ❌ Not currently running
+EKS Runtime Validation    ✅ Completed previously
+VPC Resources             ⚠️ Verify current AWS state
 ```
 
-The application was successfully deployed and tested on EKS before the environment was scaled down for AWS cost control.
+The EKS environment was deployed and runtime-tested successfully before being removed/reduced for cost-control purposes.
+
+---
+
+# Cost-Control Policy
+
+MarketSphere was intentionally developed with AWS cost awareness.
+
+The project follows these principles:
+
+1. Do not provision additional EKS nodes unnecessarily.
+2. Do not recreate the EKS environment solely for demonstration.
+3. Review Terraform plans before applying infrastructure.
+4. Remove or avoid unnecessary NAT Gateway, Load Balancer, EC2, and EBS resources.
+5. Validate infrastructure locally where possible.
+6. Use existing resources rather than creating duplicate infrastructure.
+7. Keep AWS runtime resources disabled when they are not required.
+
+This approach allows the project to demonstrate real AWS/Kubernetes experience without unnecessarily increasing cloud costs.
 
 ---
 
 # Future Enhancements
 
-The following are possible future improvements but are **not required for the current project**:
+The following features are possible future improvements and are **not required for the current project**:
 
-* GitHub Actions CI/CD pipeline
-* Prometheus and Grafana monitoring
-* Metrics Server for Kubernetes HPA
+* Full GitHub Actions CI/CD pipeline
+* Prometheus integration
+* Grafana dashboards
+* Loki centralized logging
+* Kubernetes Metrics Server
+* Production HPA metrics
 * AWS Load Balancer Controller
-* Public ALB endpoint
+* Public AWS ALB
 * HTTPS/TLS automation
-* Centralized logging with Loki
-* Argo CD GitOps deployment
-* Production-grade secrets management
-* Automated infrastructure deployment
+* Argo CD GitOps
+* AWS Secrets Manager integration
+* Automated Terraform deployment
+* Advanced pipeline execution UI
+* Full monitoring dashboard
+* Advanced platform settings UI
 
-These can be added later without changing the core architecture.
+These should be treated as future development rather than existing production capabilities.
 
 ---
 
-# Key Portfolio Statement
+# Recommended Deployment Workflow
 
-**MarketSphere is a cloud-native e-commerce platform demonstrating end-to-end DevOps implementation using Docker, Amazon ECR, Terraform, Kubernetes, Amazon EKS, PostgreSQL, Redis, and Python-based RAG/GenAI services. The infrastructure and workloads were deployed and validated on AWS, including successful Kubernetes application connectivity and background worker execution, followed by deliberate cost-controlled shutdown of runtime resources.**
+The complete intended workflow is:
+
+```text
+Developer
+    |
+    v
+Git / GitHub
+    |
+    v
+Application Development
+    |
+    v
+Lint + Typecheck + Tests
+    |
+    v
+Production Build
+    |
+    v
+Docker Build
+    |
+    v
+Amazon ECR
+    |
+    v
+Terraform
+    |
+    v
+AWS Infrastructure
+    |
+    v
+Amazon EKS
+    |
+    +----------------------+
+    |          |           |
+    v          v           v
+   App       Worker      Redis
+    |          |
+    +----------+
+         |
+         v
+    PostgreSQL
+         |
+         v
+Application Validation
+```
+
+For the current cost-controlled state, the AWS/EKS portion of this workflow is retained as the documented deployment architecture and historical validation path rather than an always-running production environment.
+
+---
+
+# Portfolio Summary
+
+**MarketSphere is a cloud-native DevOps control plane demonstrating end-to-end application and infrastructure engineering using Next.js, TypeScript, PostgreSQL, Redis, Docker, Terraform, Kubernetes, Amazon ECR, and Amazon EKS.**
+
+The project includes:
+
+* Containerized application and worker services
+* PostgreSQL persistence
+* Redis-backed application infrastructure
+* Authentication and authorization
+* Project and environment management
+* Pipeline management
+* Deployment job processing
+* Kubernetes manifests using Kustomize
+* Terraform-based AWS infrastructure
+* Amazon ECR container image workflows
+* EKS runtime deployment and validation
+* Operational health and queue metrics
+* A companion Python RAG/GenAI knowledge assistant using FAISS and AWS Bedrock
+* Automated testing and multi-layer validation
+* Practical AWS cost-control and infrastructure lifecycle management
+
+The AWS/EKS environment was **successfully deployed and runtime-tested**, including application, worker, Redis, ECR image pulling, Kubernetes service connectivity, and application health validation. After validation, the AWS runtime was deliberately reduced/removed to avoid unnecessary cloud expenditure.
+
+This project demonstrates practical DevOps capabilities across:
+
+```text
+Development
+    ↓
+Source Control
+    ↓
+Testing
+    ↓
+Containerization
+    ↓
+Infrastructure as Code
+    ↓
+Cloud Infrastructure
+    ↓
+Kubernetes
+    ↓
+Application Deployment
+    ↓
+Operations
+    ↓
+Troubleshooting
+    ↓
+Cost Management
+```
+
+---
+
+## Final Status
+
+```text
+MarketSphere
+|
++-- Application              ✅
++-- Authentication           ✅
++-- PostgreSQL               ✅
++-- Redis                    ✅
++-- Worker                   ✅
++-- Docker                   ✅
++-- ECR                      ✅
++-- Kubernetes               ✅
++-- Terraform                ✅
++-- EKS Runtime Validation   ✅
++-- Production Validation    ✅
++-- AI/RAG Assistant         ✅
++-- Automated Testing        ✅
++-- Documentation            ✅
+|
++-- Current AWS Runtime      Cost-Controlled / Not Active
+```
+
+**MarketSphere is complete as a portfolio-grade DevOps project, with AWS/EKS runtime validation completed and the current cloud runtime intentionally kept inactive for cost control.**
